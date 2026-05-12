@@ -692,24 +692,31 @@ color: var(–ink-soft);
   </header>
 
   <nav class="tabs">
-    <button class="tab active" data-tab="dashboard">Πίνακας</button>
+    <button class="tab active" data-tab="dashboard">Overview</button>
     <button class="tab" data-tab="bulk">Μαζικός Έλεγχος</button>
-    <button class="tab" data-tab="forecast">Forecasting</button>
-    <button class="tab" data-tab="calendar">Ημερολόγιο <span class="count" id="actions-count">0</span></button>
+    <button class="tab" data-tab="forecast">SKU Forecast</button>
+    <button class="tab" data-tab="calendar">Activation Calendar <span class="count" id="actions-count">0</span></button>
     <button class="tab" data-tab="catalog">Κατάλογος <span class="count" id="catalog-count">0</span></button>
-    <button class="tab" data-tab="sales">Πωλήσεις</button>
+    <button class="tab" data-tab="sales">Εισαγωγή Πωλήσεων</button>
     <button class="tab" data-tab="lift">Lift Library</button>
-    <button class="tab" data-tab="data">Δεδομένα</button>
+    <button class="tab" data-tab="data">Εισαγωγή Καταλόγου</button>
   </nav>
 
   <!-- ====================== DASHBOARD ====================== -->
 
   <section class="pane active" id="pane-dashboard">
-    <div class="fek-notice">
-      <div class="fek-icon">§</div>
-      <div>
-        <h4>Γενικός Κανόνας ΦΕΚ 2640/Β/2023</h4>
-        <p>Η ανακοινούμενη ως προγενέστερη τιμή = η <strong>χαμηλότερη τιμή των τελευταίων 30 ημερών</strong> πριν την εφαρμογή της μείωσης. Σε διαδοχικές μειώσεις, εκστρατεία προοδευτικών μειώσεων δεν επιτρέπεται να υπερβαίνει τις 30 ημέρες (παρ. 19).</p>
+    <div class="card" style="margin-bottom: 18px;">
+      <div class="card-header" style="margin-bottom: 14px; padding-bottom: 12px;">
+        <div>
+          <div class="card-title">Συνολική Εικόνα</div>
+          <div class="card-subtitle">Στατιστικά καταλόγου, ενεργών ενεργειών και επικίνδυνων κωδικών — με δυνατότητα φιλτραρίσματος ανά brand</div>
+        </div>
+        <div class="field" style="min-width: 220px; max-width: 280px;">
+          <label>Φίλτρο Brand</label>
+          <select id="overview-brand-filter" class="search-input" style="width: 100%; min-width: auto;">
+            <option value="all">Όλα τα brands</option>
+          </select>
+        </div>
       </div>
     </div>
 
@@ -805,16 +812,17 @@ color: var(–ink-soft);
         <div class="field">
           <label>Τύπος Ενέργειας</label>
           <select id="bulk-type">
-            <option value="percent">Ποσοστιαία έκπτωση</option>
-            <option value="flat">Έκπτωση σε ευρώ (flat)</option>
-            <option value="conditional">Υπό όρους (2+1 κλπ)</option>
+            <option value="percent">Ποσοστιαία έκπτωση (%)</option>
+            <option value="flat">Έκπτωση σε ευρώ (αφαιρείται από SRP)</option>
+            <option value="conditional_percent">Υπό όρους — % έκπτωση (π.χ. 2 τεμ. −20%)</option>
+            <option value="conditional_flat">Υπό όρους — ειδική τιμή flat (π.χ. 2 τεμ. €X)</option>
             <option value="gwp">Δώρο με αγορά (GWP)</option>
             <option value="bundle">Bundle</option>
           </select>
         </div>
         <div class="field">
-          <label>Τιμή / Ποσοστό</label>
-          <input type="number" id="bulk-value" step="0.01" placeholder="20">
+          <label id="bulk-value-label">Τιμή / Ποσοστό</label>
+          <input type="number" id="bulk-value" step="0.01" value="40">
         </div>
       </div>
       <div style="margin-top: 14px; display: flex; gap: 6px;">
@@ -875,15 +883,15 @@ color: var(–ink-soft);
     <div class="card">
       <div class="card-header">
         <div>
-          <div class="card-title">Forecast Πωλήσεων (Bayesian)</div>
-          <div class="card-subtitle">Gamma-Poisson baseline ανά κωδικό × Log-normal promotional lift × Monte Carlo (1000 iter)</div>
+          <div class="card-title">SKU Forecast (Bayesian)</div>
+          <div class="card-subtitle">Πρόβλεψη πωλήσεων ενός κωδικού · Gamma-Poisson baseline × Log-normal promotional lift × Monte Carlo (1000 iter)</div>
         </div>
       </div>
 
 ```
   <div class="form-grid" style="margin-bottom: 16px;">
     <div class="field">
-      <label>Κωδικός</label>
+      <label>Κωδικός SKU</label>
       <input type="text" id="fc-code" list="fc-codes-list" placeholder="π.χ. ELC-001">
       <datalist id="fc-codes-list"></datalist>
     </div>
@@ -896,14 +904,15 @@ color: var(–ink-soft);
       <select id="fc-type">
         <option value="none">Καμία (baseline)</option>
         <option value="percent">Ποσοστιαία έκπτωση</option>
-        <option value="flat">Flat έκπτωση</option>
-        <option value="conditional">Υπό όρους</option>
+        <option value="flat">Flat (αφαιρείται από SRP)</option>
+        <option value="conditional_percent">Υπό όρους − %</option>
+        <option value="conditional_flat">Υπό όρους − ειδική τιμή</option>
         <option value="gwp">GWP</option>
         <option value="bundle">Bundle</option>
       </select>
     </div>
     <div class="field">
-      <label>Ένταση (%)</label>
+      <label>Ένταση (% ή €)</label>
       <input type="number" id="fc-intensity" value="20">
     </div>
   </div>
@@ -934,23 +943,53 @@ color: var(–ink-soft);
   <!-- ====================== CALENDAR ====================== -->
 
   <section class="pane" id="pane-calendar">
-    <div class="toolbar">
-      <div class="toolbar-left">
-        <button class="btn btn-accent" onclick="openActionModal()">+ Νέα Ενέργεια</button>
+    <div class="card" style="margin-bottom: 14px;">
+      <div class="card-header" style="margin-bottom: 12px; padding-bottom: 10px;">
+        <div>
+          <div class="card-title">Activation Calendar</div>
+          <div class="card-subtitle">Όλες οι ενέργειες ανά ημερομηνία · κάθε ενέργεια εμφανίζει actuals (αν υπάρχουν πωλήσεις) και forecast (P10/P50/P90)</div>
+        </div>
+        <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+          <button class="btn btn-accent btn-sm" onclick="openActionModal()">+ Νέα Ενέργεια</button>
+          <input type="file" id="actions-file" accept=".csv" style="display:none;" onchange="uploadActionsFile(event)">
+          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('actions-file').click()">Upload CSV</button>
+          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('actions-csv-paste').style.display = document.getElementById('actions-csv-paste').style.display === 'block' ? 'none' : 'block'">Paste CSV</button>
+        </div>
       </div>
-      <div class="toolbar-right">
-        <input type="text" class="search-input" id="cal-search" placeholder="Αναζήτηση...">
-        <select class="search-input" id="cal-filter">
-          <option value="all">Όλοι οι τύποι</option>
-          <option value="percent">Ποσοστιαία</option>
-          <option value="flat">Flat</option>
-          <option value="conditional">Υπό όρους</option>
-          <option value="gwp">GWP</option>
-          <option value="bundle">Bundle</option>
-        </select>
+      <div id="actions-csv-paste" style="display:none;">
+        <div class="import-help">
+          <strong>Μορφή:</strong> <code>τίτλος, ημ.έναρξης, ημ.λήξης, τύπος, τιμή/ποσοστό, κωδικός1|κωδικός2|..., σημειώσεις</code><br>
+          <strong>Τύποι:</strong> <code>percent</code>, <code>flat</code>, <code>conditional_percent</code>, <code>conditional_flat</code>, <code>gwp</code>, <code>bundle</code>, <code>category</code><br>
+          <strong>Παράδειγμα:</strong> <code>Mother's Day, 2026-05-01, 2026-05-15, percent, 25, ELC-001|ELC-002, Online only</code>
+        </div>
+        <div class="field">
+          <textarea id="actions-csv" rows="5" placeholder="Mother's Day, 2026-05-01, 2026-05-15, percent, 25, ELC-001|ELC-002, Online only"></textarea>
+        </div>
+        <div style="margin-top: 8px;">
+          <button class="btn btn-accent btn-sm" onclick="importActionsCSV()">Εισαγωγή</button>
+        </div>
       </div>
     </div>
-    <div id="calendar-list"></div>
+
+```
+<div class="toolbar">
+  <div class="toolbar-left"></div>
+  <div class="toolbar-right">
+    <input type="text" class="search-input" id="cal-search" placeholder="Αναζήτηση...">
+    <select class="search-input" id="cal-filter">
+      <option value="all">Όλοι οι τύποι</option>
+      <option value="percent">Ποσοστιαία</option>
+      <option value="flat">Flat</option>
+      <option value="conditional_percent">Υπό όρους %</option>
+      <option value="conditional_flat">Υπό όρους flat</option>
+      <option value="gwp">GWP</option>
+      <option value="bundle">Bundle</option>
+    </select>
+  </div>
+</div>
+<div id="calendar-list"></div>
+```
+
   </section>
 
   <!-- ====================== CATALOG ====================== -->
@@ -1141,8 +1180,9 @@ color: var(–ink-soft);
         <label>Τύπος Ενέργειας</label>
         <select id="act-type">
           <option value="percent">Ποσοστιαία (%)</option>
-          <option value="flat">Flat (€)</option>
-          <option value="conditional">Υπό όρους (2+1, 3 τεμ.)</option>
+          <option value="flat">Flat (αφαιρείται από SRP)</option>
+          <option value="conditional_percent">Υπό όρους − % (2 τεμ. −20%)</option>
+          <option value="conditional_flat">Υπό όρους − flat (2 τεμ. €X)</option>
           <option value="gwp">Δώρο με αγορά (GWP)</option>
           <option value="bundle">Bundle</option>
           <option value="category">Κατηγορία</option>
@@ -1213,9 +1253,11 @@ const LIFT_DEFAULTS = [
   { type: 'flat',    bucket: 'small',  med: 1.6,  sigma: 0.35, note: 'Σταθερό όφελος <15% SRP' },
   { type: 'flat',    bucket: 'medium', med: 2.5,  sigma: 0.40, note: 'Σταθερό όφελος 15-30% SRP' },
   { type: 'flat',    bucket: 'large',  med: 3.8,  sigma: 0.50, note: 'Σταθερό όφελος >30% SRP' },
-  { type: 'conditional', bucket: 'any', med: 2.2, sigma: 0.45, note: '2+1, 3 τεμ. κλπ' },
+  { type: 'conditional_percent', bucket: 'any', med: 2.2, sigma: 0.45, note: '2 τεμ. -20% κλπ' },
+  { type: 'conditional_flat',    bucket: 'any', med: 2.4, sigma: 0.45, note: '2 τεμ. στα €X' },
   { type: 'gwp',     bucket: 'any',    med: 1.5,  sigma: 0.30, note: 'Δώρο με αγορά' },
   { type: 'bundle',  bucket: 'any',    med: 1.7,  sigma: 0.35, note: 'Συσκευασία/Set' },
+  { type: 'category',bucket: 'any',    med: 2.0,  sigma: 0.40, note: 'Έκπτωση σε κατηγορία' },
   { type: 'none',    bucket: 'any',    med: 1.0,  sigma: 0.0,  note: 'Baseline (καμία ενέργεια)' }
 ];
 
@@ -1231,17 +1273,22 @@ let state = {
 const TYPE_LABELS = {
   percent: 'Ποσοστιαία %',
   flat: 'Flat €',
-  conditional: 'Υπό όρους',
+  conditional_percent: 'Υπό όρους %',
+  conditional_flat: 'Υπό όρους flat',
   gwp: 'Δώρο (GWP)',
   bundle: 'Bundle',
   category: 'Κατηγορία',
-  none: 'Καμία'
+  none: 'Καμία',
+  // backward compat
+  conditional: 'Υπό όρους'
 };
 
 const TYPE_CLASSES = {
   percent: 'percent', flat: 'flat',
-  conditional: 'conditional', gwp: 'gwp',
-  bundle: 'gwp', category: 'percent'
+  conditional_percent: 'conditional',
+  conditional_flat: 'conditional',
+  conditional: 'conditional',
+  gwp: 'gwp', bundle: 'gwp', category: 'percent'
 };
 
 const DAY_NAMES = ['Κυριακή','Δευτέρα','Τρίτη','Τετάρτη','Πέμπτη','Παρασκευή','Σάββατο'];
@@ -1336,7 +1383,7 @@ function getEffectivePrice(code, dateStr) {
     if (date >= start && date <= end) {
       let actionPrice;
       if (act.type === 'percent') actionPrice = codeObj.srp * (1 - act.value / 100);
-      else if (act.type === 'flat') actionPrice = act.value;
+      else if (act.type === 'flat') actionPrice = codeObj.srp - act.value;  // FIX
       if (actionPrice < lowestPrice) lowestPrice = actionPrice;
     }
   });
@@ -1384,7 +1431,9 @@ function checkCompliance(code, dateStr, type, value) {
   if (!codeObj) {
     return { status: 'err', title: 'Κωδικός δεν βρέθηκε', message: `Ο κωδικός ${code} δεν υπάρχει στον κατάλογο.` };
   }
-  if (type === 'gwp' || type === 'bundle' || type === 'conditional' || type === 'category') {
+  // Conditional / GWP / bundle / category — δεν υπόκεινται στον 30ήμερο κανόνα
+  if (type === 'gwp' || type === 'bundle' || type === 'category' ||
+      type === 'conditional_percent' || type === 'conditional_flat' || type === 'conditional') {
     return {
       status: 'ok',
       title: 'Επιτρέπεται',
@@ -1394,8 +1443,17 @@ function checkCompliance(code, dateStr, type, value) {
   }
   let proposedPrice;
   if (type === 'percent') proposedPrice = codeObj.srp * (1 - value / 100);
-  else if (type === 'flat') proposedPrice = value;
+  else if (type === 'flat') proposedPrice = codeObj.srp - value;  // FIX: flat αφαιρείται από SRP
   proposedPrice = Math.round(proposedPrice * 100) / 100;
+
+  if (proposedPrice < 0) {
+    return {
+      status: 'err',
+      title: 'Μη Έγκυρη Τιμή',
+      message: `Η flat έκπτωση €${value.toFixed(2)} υπερβαίνει το SRP (€${codeObj.srp.toFixed(2)}). Αρνητική τελική τιμή.`,
+      detail: { proposed: proposedPrice, srp: codeObj.srp }
+    };
+  }
 
   const ref = getReferencePrice(code, dateStr);
 
@@ -1476,22 +1534,24 @@ function getBaselinePosterior(code) {
   return { alpha, beta, n, mean: alpha / beta, cold: n < 14 };
 }
 
-function getLiftParams(type, intensity) {
-  // intensity: % for percent type, € for flat
+function getLiftParams(type, intensity, srp) {
   let bucket;
   if (type === 'percent') {
     if (intensity < 15) bucket = '0-15%';
     else if (intensity < 25) bucket = '15-25%';
     else if (intensity < 40) bucket = '25-40%';
     else bucket = '40%+';
-  } else if (type === 'flat') {
-    // intensity in this case is € amount; we need to know % discount
-    // For simplicity, treat as % buckets if we have srp ratio... fallback medium
-    bucket = 'medium';
+  } else if (type === 'flat' && srp) {
+    // Convert flat € discount to % of SRP, then bucket
+    const pctOfSrp = (intensity / srp) * 100;
+    if (pctOfSrp < 15) bucket = 'small';
+    else if (pctOfSrp < 30) bucket = 'medium';
+    else bucket = 'large';
   } else {
     bucket = 'any';
   }
   const entry = state.lift.find(l => l.type === type && l.bucket === bucket) ||
+                state.lift.find(l => l.type === type) ||
                 state.lift.find(l => l.type === 'none');
   return entry;
 }
@@ -1501,24 +1561,15 @@ function forecastUnits(code, days, type, intensity) {
   if (!codeObj) return null;
 
   const baseline = getBaselinePosterior(code);
-  const liftParams = getLiftParams(type, intensity);
+  const liftParams = getLiftParams(type, intensity, codeObj.srp);
 
   const N_SIMS = 1000;
   const sims = [];
 
   for (let i = 0; i < N_SIMS; i++) {
-    // Draw baseline rate from posterior Gamma
-    // Posterior Gamma(α, β) where mean = α/β
-    // Use scale = 1/β
     const rate = randomGamma(baseline.alpha, 1 / baseline.beta);
-
-    // Draw lift from log-normal
     const lift = type === 'none' ? 1.0 : randomLogNormal(liftParams.med, liftParams.sigma);
-
-    // Total expected units across days
     const expected = rate * lift * days;
-
-    // Add Poisson noise
     const actual = randomPoisson(expected);
     sims.push(actual);
   }
@@ -1529,10 +1580,10 @@ function forecastUnits(code, days, type, intensity) {
   const p50 = percentile(sims, 0.50);
   const p90 = percentile(sims, 0.90);
 
-  // Calculate revenue
+  // Calculate unit price
   let unitPrice;
   if (type === 'percent') unitPrice = codeObj.srp * (1 - intensity / 100);
-  else if (type === 'flat') unitPrice = intensity;
+  else if (type === 'flat') unitPrice = codeObj.srp - intensity;  // FIX
   else unitPrice = codeObj.srp;
 
   return {
@@ -2082,12 +2133,60 @@ function deleteAction(id) {
 
 function actionDescription(a) {
   if (a.type === 'percent') return `−${a.value}% έκπτωση`;
-  if (a.type === 'flat') return `Τιμή €${a.value}`;
-  if (a.type === 'conditional') return `Υπό όρους: ${a.notes || ''}`;
+  if (a.type === 'flat') return `−€${a.value} έκπτωση`;
+  if (a.type === 'conditional_percent') return `Υπό όρους: −${a.value}%`;
+  if (a.type === 'conditional_flat') return `Υπό όρους: ειδική τιμή €${a.value}`;
+  if (a.type === 'conditional') return `Υπό όρους${a.value ? ' · ' + a.value : ''}`;
   if (a.type === 'gwp') return `GWP${a.notes ? ' · ' + a.notes : ''}`;
   if (a.type === 'bundle') return `Bundle${a.notes ? ' · ' + a.notes : ''}`;
   if (a.type === 'category') return `Κατηγορία −${a.value}%`;
   return '';
+}
+
+function importActionsCSV() {
+  const text = document.getElementById('actions-csv').value.trim();
+  if (!text) return;
+  const lines = text.split('\n').filter(Boolean);
+  let added = 0, skipped = 0;
+  lines.forEach(line => {
+    // Format: τίτλος, start, end, type, value, codes (pipe-separated), notes
+    const parts = line.split(',').map(s => s.trim());
+    if (parts.length < 4) { skipped++; return; }
+    const title = parts[0];
+    const start = parts[1];
+    const end = parts[2] || start;
+    const type = parts[3];
+    const value = parseFloat(parts[4]);
+    const codes = (parts[5] || '').split(/[|;]/).map(s => s.trim().toUpperCase()).filter(Boolean);
+    const notes = parts.slice(6).join(',').trim();
+
+    if (!start || codes.length === 0 || !type) { skipped++; return; }
+
+    state.actions.push({
+      id: Date.now().toString() + '_' + added,
+      title, start, end, type,
+      codes,
+      value: isNaN(value) ? null : value,
+      notes
+    });
+    added++;
+  });
+  alert(`${added} ενέργειες προστέθηκαν${skipped > 0 ? `, ${skipped} αγνοήθηκαν` : ''}`);
+  document.getElementById('actions-csv').value = '';
+  document.getElementById('actions-csv-paste').style.display = 'none';
+  save();
+}
+
+function uploadActionsFile(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('actions-csv').value = e.target.result;
+    document.getElementById('actions-csv-paste').style.display = 'block';
+    importActionsCSV();
+  };
+  reader.readAsText(file);
 }
 
 function renderCalendar() {
@@ -2110,6 +2209,8 @@ function renderCalendar() {
   });
   const sortedDates = Object.keys(grouped).sort((a, b) => b.localeCompare(a));
 
+  const today = todayISO();
+
   if (sortedDates.length === 0) {
     container.innerHTML = '<div class="empty"><div class="empty-icon">∅</div><p>Δεν υπάρχουν ενέργειες</p></div>';
   } else {
@@ -2125,24 +2226,102 @@ function renderCalendar() {
           </div>
           <div class="action-grid">
             ${acts.map(a => {
-              // Sales for this action's codes during this period
-              const totalSales = state.sales
+              // Compute actuals (sales during action period for action's codes)
+              const actStart = new Date(a.start);
+              const actEnd = new Date(a.end || a.start);
+              const actualSales = state.sales
                 .filter(s => a.codes.includes(s.code))
                 .filter(s => {
                   const sd = new Date(s.date);
-                  return sd >= new Date(a.start) && sd <= new Date(a.end || a.start);
-                })
-                .reduce((acc, s) => acc + s.units, 0);
+                  return sd >= actStart && sd <= actEnd;
+                });
+              const actualUnits = actualSales.reduce((acc, s) => acc + s.units, 0);
+
+              // Compute action duration & forecast
+              const duration = Math.max(1, daysBetween(a.start, a.end || a.start) + 1);
+              const isOngoing = new Date(today) >= actStart && new Date(today) <= actEnd;
+              const isPast = new Date(today) > actEnd;
+              const isFuture = new Date(today) < actStart;
+
+              // Aggregate forecast across all codes in the action
+              let totP10 = 0, totP50 = 0, totP90 = 0;
+              let revP10 = 0, revP50 = 0, revP90 = 0;
+              let hasForecast = false;
+              if (a.type === 'percent' || a.type === 'flat' ||
+                  a.type === 'conditional_percent' || a.type === 'conditional_flat' ||
+                  a.type === 'gwp' || a.type === 'bundle' || a.type === 'category') {
+                a.codes.forEach(c => {
+                  const fc = forecastUnits(c, duration, a.type, a.value || 0);
+                  if (fc) {
+                    totP10 += fc.units.p10;
+                    totP50 += fc.units.p50;
+                    totP90 += fc.units.p90;
+                    revP10 += fc.revenue.p10;
+                    revP50 += fc.revenue.p50;
+                    revP90 += fc.revenue.p90;
+                    hasForecast = true;
+                  }
+                });
+              }
+
+              // Revenue actuals (use action's unit price for past/ongoing)
+              let actualRevenue = 0;
+              if (actualSales.length > 0) {
+                actualSales.forEach(s => {
+                  const codeObj = state.codes.find(c => c.id === s.code);
+                  if (codeObj) {
+                    let price = codeObj.srp;
+                    if (a.type === 'percent') price = codeObj.srp * (1 - (a.value || 0) / 100);
+                    else if (a.type === 'flat') price = codeObj.srp - (a.value || 0);
+                    actualRevenue += s.units * price;
+                  }
+                });
+              }
 
               return `
                 <div class="action-box">
                   <button class="del-btn" onclick="deleteAction('${a.id}')">×</button>
-                  <span class="type-tag ${TYPE_CLASSES[a.type] || ''}">${TYPE_LABELS[a.type]}</span>
-                  ${a.title ? '<div style="font-family: Fraunces, serif; font-size: 14px; margin-bottom: 4px;">' + a.title + '</div>' : ''}
+                  <span class="type-tag ${TYPE_CLASSES[a.type] || ''}">${TYPE_LABELS[a.type] || a.type}</span>
+                  ${isOngoing ? '<span class="badge badge-ok" style="margin-left: 4px;">ΕΝΕΡΓΗ</span>' : ''}
+                  ${isPast ? '<span class="badge badge-neutral" style="margin-left: 4px;">Έληξε</span>' : ''}
+                  ${isFuture ? '<span class="badge badge-info" style="margin-left: 4px;">Μελλοντική</span>' : ''}
+                  ${a.title ? '<div style="font-family: Fraunces, serif; font-size: 14px; margin-top: 4px; margin-bottom: 4px;">' + a.title + '</div>' : ''}
                   <div class="codes-line">${a.codes.slice(0, 5).join(', ')}${a.codes.length > 5 ? ' +' + (a.codes.length - 5) : ''}</div>
-                  <div class="desc"><strong>${actionDescription(a)}</strong>${a.end && a.end !== a.start ? '<br><small>έως ' + fmtDateShort(a.end) + '</small>' : ''}</div>
-                  ${a.notes && a.type !== 'conditional' && a.type !== 'gwp' && a.type !== 'bundle' ? '<div class="desc" style="margin-top: 4px; font-style: italic; color: var(--ink-mute);">' + a.notes + '</div>' : ''}
-                  ${totalSales > 0 ? '<div class="sales-strip"><span>Πωλήσεις περιόδου:</span><strong>' + totalSales + ' τεμ.</strong></div>' : ''}
+                  <div class="desc"><strong>${actionDescription(a)}</strong>${a.end && a.end !== a.start ? '<br><small>έως ' + fmtDateShort(a.end) + ' · ' + duration + ' ημ.</small>' : ''}</div>
+                  ${a.notes ? '<div class="desc" style="margin-top: 4px; font-style: italic; color: var(--ink-mute);">' + a.notes + '</div>' : ''}
+
+                  ${hasForecast ? `
+                  <div style="margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--border-soft);">
+                    <div style="font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-mute); margin-bottom: 4px;">Πρόβλεψη (Units)</div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; font-family: 'JetBrains Mono', monospace; font-size: 11px; text-align: center;">
+                      <div style="background: var(--bg-soft); padding: 4px; border-radius: 2px;">
+                        <div style="color: var(--ink-mute); font-size: 9px;">P10</div>
+                        <div>${Math.round(totP10).toLocaleString('el-GR')}</div>
+                      </div>
+                      <div style="background: var(--accent-soft); padding: 4px; border-radius: 2px;">
+                        <div style="color: var(--accent); font-size: 9px;">P50</div>
+                        <div style="color: var(--accent); font-weight: 600;">${Math.round(totP50).toLocaleString('el-GR')}</div>
+                      </div>
+                      <div style="background: var(--bg-soft); padding: 4px; border-radius: 2px;">
+                        <div style="color: var(--ink-mute); font-size: 9px;">P90</div>
+                        <div>${Math.round(totP90).toLocaleString('el-GR')}</div>
+                      </div>
+                    </div>
+                    <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--ink-soft); margin-top: 4px; text-align: center;">
+                      Έσοδα: €${Math.round(revP10).toLocaleString('el-GR')} → <strong style="color: var(--accent);">€${Math.round(revP50).toLocaleString('el-GR')}</strong> → €${Math.round(revP90).toLocaleString('el-GR')}
+                    </div>
+                  </div>
+                  ` : ''}
+
+                  ${actualUnits > 0 ? `
+                  <div style="margin-top: 8px; padding: 6px 8px; background: var(--ok-bg); border-radius: 2px; font-family: 'JetBrains Mono', monospace; font-size: 10px;">
+                    <div style="display: flex; justify-content: space-between;">
+                      <span style="color: var(--ok); font-weight: 600;">ACTUALS μέχρι τώρα</span>
+                      <span style="color: var(--ok); font-weight: 600;">${actualUnits.toLocaleString('el-GR')} τεμ. · €${Math.round(actualRevenue).toLocaleString('el-GR')}</span>
+                    </div>
+                    ${hasForecast && totP50 > 0 ? `<div style="color: var(--ink-soft); margin-top: 2px;">Pace vs P50: ${Math.round(actualUnits / totP50 * 100)}%</div>` : ''}
+                  </div>
+                  ` : (isPast ? '<div style="margin-top: 8px; padding: 6px 8px; background: var(--bg-soft); border-radius: 2px; font-family: \'JetBrains Mono\', monospace; font-size: 10px; color: var(--ink-mute);">Δεν έχουν εισαχθεί πωλήσεις</div>' : '')}
                 </div>
               `;
             }).join('')}
@@ -2276,20 +2455,49 @@ function resetLiftDefaults() {
 function renderDashboard() {
   const today = todayISO();
   const stats = document.getElementById('stats-grid');
+  const brandFilter = document.getElementById('overview-brand-filter')?.value || 'all';
 
-  const totalCodes = state.codes.length;
-  const activeToday = state.actions.filter(a => {
+  // Update brand filter options
+  const allBrands = [...new Set(state.codes.map(c => c.brand).filter(Boolean))].sort();
+  const brandSelect = document.getElementById('overview-brand-filter');
+  if (brandSelect) {
+    const currentVal = brandSelect.value;
+    brandSelect.innerHTML = '<option value="all">Όλα τα brands</option>' +
+      allBrands.map(b => `<option value="${b}">${b}</option>`).join('');
+    brandSelect.value = currentVal;
+  }
+
+  // Apply brand filter to codes
+  const filteredCodes = brandFilter === 'all'
+    ? state.codes
+    : state.codes.filter(c => c.brand === brandFilter);
+  const filteredCodeIds = new Set(filteredCodes.map(c => c.id));
+
+  // Apply brand filter to actions (action is included if it has at least one code in filter)
+  const filteredActions = brandFilter === 'all'
+    ? state.actions
+    : state.actions.filter(a => a.codes.some(c => filteredCodeIds.has(c)));
+
+  const totalCodes = filteredCodes.length;
+  const totalBrands = brandFilter === 'all' ? allBrands.length : 1;
+
+  const activeToday = filteredActions.filter(a => {
     const t = new Date(today);
     return t >= new Date(a.start) && t <= new Date(a.end || a.start);
   });
+
   const discountedCodes = new Set();
   activeToday.forEach(a => {
-    if (a.type === 'percent' || a.type === 'flat') a.codes.forEach(c => discountedCodes.add(c));
+    if (a.type === 'percent' || a.type === 'flat') {
+      a.codes.forEach(c => {
+        if (filteredCodeIds.has(c)) discountedCodes.add(c);
+      });
+    }
   });
 
   let dangerCount = 0;
   const dangerList = [];
-  state.codes.forEach(c => {
+  filteredCodes.forEach(c => {
     const camp = getActiveCampaignStart(c.id, today);
     if (camp) {
       const days = daysBetween(camp.start, today);
@@ -2300,13 +2508,20 @@ function renderDashboard() {
     }
   });
 
-  const totalSalesPoints = state.sales.length;
+  const totalSalesPoints = brandFilter === 'all'
+    ? state.sales.length
+    : state.sales.filter(s => filteredCodeIds.has(s.code)).length;
 
   stats.innerHTML = `
     <div class="stat">
+      <div class="stat-label">Brands</div>
+      <div class="stat-value">${totalBrands}</div>
+      <div class="stat-sub">${brandFilter === 'all' ? 'στον κατάλογο' : brandFilter}</div>
+    </div>
+    <div class="stat">
       <div class="stat-label">Κωδικοί</div>
       <div class="stat-value">${totalCodes.toLocaleString('el-GR')}</div>
-      <div class="stat-sub">στον κατάλογο</div>
+      <div class="stat-sub">${brandFilter === 'all' ? 'συνολικά' : 'στο brand'}</div>
     </div>
     <div class="stat ok">
       <div class="stat-label">Ενεργές Ενέργειες</div>
@@ -2335,10 +2550,11 @@ function renderDashboard() {
   if (dangerList.length === 0) {
     alerts.innerHTML = '<div class="empty" style="padding: 20px;"><p>Κανένας κωδικός σε επικίνδυνη ζώνη</p></div>';
   } else {
-    alerts.innerHTML = '<div style="max-height: 280px; overflow-y: auto;"><table style="width:100%; font-size: 12px;"><thead><tr><th>Κωδ.</th><th>Από</th><th>Ημ.</th><th>Status</th></tr></thead><tbody>' +
+    alerts.innerHTML = '<div style="max-height: 280px; overflow-y: auto;"><table style="width:100%; font-size: 12px;"><thead><tr><th>Κωδ.</th><th>Brand</th><th>Από</th><th>Ημ.</th><th>Status</th></tr></thead><tbody>' +
       dangerList.sort((a, b) => b.days - a.days).slice(0, 10).map(d => `
         <tr>
           <td class="code-cell">${d.code.id}</td>
+          <td style="font-size: 11px;">${d.code.brand || '—'}</td>
           <td style="font-family: 'JetBrains Mono', monospace; font-size: 11px;">${fmtDateShort(d.action.start)}</td>
           <td class="num-right">${d.days}</td>
           <td>${d.days >= 30 ? '<span class="badge badge-err">!</span>' : '<span class="badge badge-warn">' + (30 - d.days) + 'ημ</span>'}</td>
@@ -2346,27 +2562,76 @@ function renderDashboard() {
       `).join('') + '</tbody></table></div>';
   }
 
-  // Active campaigns forecast
+  // Active campaigns: forecast + actuals
   const fcEl = document.getElementById('active-forecast');
   if (activeToday.length === 0) {
     fcEl.innerHTML = '<div class="empty" style="padding: 20px;"><p>Δεν υπάρχουν ενεργές ενέργειες</p></div>';
   } else {
-    let html = '<div style="max-height: 280px; overflow-y: auto;">';
-    activeToday.slice(0, 5).forEach(a => {
-      const daysLeft = Math.max(1, daysBetween(today, a.end || a.start) + 1);
+    let html = '<div style="max-height: 320px; overflow-y: auto;">';
+    activeToday.slice(0, 6).forEach(a => {
+      const actStart = new Date(a.start);
+      const actEnd = new Date(a.end || a.start);
+      const totalDuration = Math.max(1, daysBetween(a.start, a.end || a.start) + 1);
+      const daysElapsed = Math.max(1, daysBetween(a.start, today) + 1);
+      const daysLeft = Math.max(0, daysBetween(today, a.end || a.start));
+
+      // Actuals so far
+      const codesInFilter = brandFilter === 'all' ? a.codes : a.codes.filter(c => filteredCodeIds.has(c));
+      let actualUnits = 0, actualRev = 0;
+      codesInFilter.forEach(c => {
+        state.sales
+          .filter(s => s.code === c)
+          .filter(s => {
+            const sd = new Date(s.date);
+            return sd >= actStart && sd <= new Date(today);
+          })
+          .forEach(s => {
+            actualUnits += s.units;
+            const codeObj = state.codes.find(x => x.id === c);
+            if (codeObj) {
+              let price = codeObj.srp;
+              if (a.type === 'percent') price = codeObj.srp * (1 - (a.value || 0) / 100);
+              else if (a.type === 'flat') price = codeObj.srp - (a.value || 0);
+              actualRev += s.units * price;
+            }
+          });
+      });
+
+      // Forecast (full campaign)
       let totP10 = 0, totP50 = 0, totP90 = 0;
-      a.codes.forEach(c => {
-        const fc = forecastUnits(c, daysLeft, a.type, a.value || 0);
+      let revP50 = 0;
+      codesInFilter.forEach(c => {
+        const fc = forecastUnits(c, totalDuration, a.type, a.value || 0);
         if (fc) {
-          totP50 += fc.revenue.p50;
-          totP10 += fc.revenue.p10;
-          totP90 += fc.revenue.p90;
+          totP10 += fc.units.p10;
+          totP50 += fc.units.p50;
+          totP90 += fc.units.p90;
+          revP50 += fc.revenue.p50;
         }
       });
-      html += `<div style="padding: 10px 0; border-bottom: 1px solid var(--border-soft);">
-        <div style="font-family: 'Fraunces', serif; font-size: 14px;">${a.title || actionDescription(a)}</div>
-        <div style="font-size: 11px; color: var(--ink-soft); margin: 2px 0;">${a.codes.length} κωδικοί · ${daysLeft} ημ. απομένουν</div>
-        <div style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--accent);">€${Math.round(totP10).toLocaleString('el-GR')} → <strong>€${Math.round(totP50).toLocaleString('el-GR')}</strong> → €${Math.round(totP90).toLocaleString('el-GR')}</div>
+
+      const pacePct = totP50 > 0 ? Math.round(actualUnits / totP50 * 100) : 0;
+
+      html += `<div style="padding: 12px 0; border-bottom: 1px solid var(--border-soft);">
+        <div style="display: flex; justify-content: space-between; align-items: baseline;">
+          <div style="font-family: 'Fraunces', serif; font-size: 14px;">${a.title || actionDescription(a)}</div>
+          <div style="font-size: 10px; color: var(--ink-mute);">${daysElapsed}/${totalDuration} ημ.</div>
+        </div>
+        <div style="font-size: 11px; color: var(--ink-soft); margin: 2px 0 6px;">${codesInFilter.length} κωδικοί · ${daysLeft} ημ. απομένουν</div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 4px;">
+          <div style="background: var(--bg-soft); padding: 6px 8px; border-radius: 2px;">
+            <div style="font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--ink-mute); letter-spacing: 0.08em;">FORECAST P50</div>
+            <div style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--accent); font-weight: 600;">${Math.round(totP50).toLocaleString('el-GR')} τεμ.</div>
+            <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--ink-soft);">€${Math.round(revP50).toLocaleString('el-GR')}</div>
+          </div>
+          <div style="background: ${actualUnits > 0 ? 'var(--ok-bg)' : 'var(--bg-soft)'}; padding: 6px 8px; border-radius: 2px;">
+            <div style="font-family: 'JetBrains Mono', monospace; font-size: 9px; color: ${actualUnits > 0 ? 'var(--ok)' : 'var(--ink-mute)'}; letter-spacing: 0.08em;">ACTUALS</div>
+            <div style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: ${actualUnits > 0 ? 'var(--ok)' : 'var(--ink-mute)'}; font-weight: 600;">${actualUnits.toLocaleString('el-GR')} τεμ.</div>
+            <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--ink-soft);">${actualUnits > 0 ? '€' + Math.round(actualRev).toLocaleString('el-GR') : 'No sales data'}</div>
+          </div>
+        </div>
+        ${actualUnits > 0 && totP50 > 0 ? `<div style="margin-top: 4px; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: ${pacePct >= 90 ? 'var(--ok)' : pacePct >= 50 ? 'var(--warn)' : 'var(--err)'};">Pace: ${pacePct}% του P50 (${Math.round(daysElapsed/totalDuration*100)}% χρόνου)</div>` : ''}
       </div>`;
     });
     html += '</div>';
@@ -2522,6 +2787,30 @@ function renderAll() {
     else if (id.startsWith('sales')) renderSalesStats();
   });
 });
+
+// Overview brand filter
+const overviewBrandFilter = document.getElementById('overview-brand-filter');
+if (overviewBrandFilter) {
+  overviewBrandFilter.addEventListener('change', renderDashboard);
+}
+
+// Dynamic label for bulk-type / bulk-value
+const bulkTypeSelect = document.getElementById('bulk-type');
+const bulkValueLabel = document.getElementById('bulk-value-label');
+const bulkValueInput = document.getElementById('bulk-value');
+function updateBulkLabel() {
+  if (!bulkTypeSelect || !bulkValueLabel) return;
+  const t = bulkTypeSelect.value;
+  if (t === 'percent' || t === 'conditional_percent' || t === 'category') {
+    bulkValueLabel.textContent = 'Ποσοστό Έκπτωσης (%)';
+  } else if (t === 'flat' || t === 'conditional_flat') {
+    bulkValueLabel.textContent = 'Έκπτωση σε € (αφαιρείται από SRP)';
+  } else {
+    bulkValueLabel.textContent = 'Τιμή (αν εφαρμόζεται)';
+  }
+}
+if (bulkTypeSelect) bulkTypeSelect.addEventListener('change', updateBulkLabel);
+updateBulkLabel();
 
 // Init
 document.getElementById('today-date').textContent = new Date().toLocaleDateString('el-GR', {
