@@ -814,15 +814,21 @@ color: var(–ink-soft);
           <select id="bulk-type">
             <option value="percent">Ποσοστιαία έκπτωση (%)</option>
             <option value="flat">Έκπτωση σε ευρώ (αφαιρείται από SRP)</option>
+            <option value="tiered_percent">Step-up tiered (% π.χ. 2τεμ=−30%, 3τεμ=−40%)</option>
+            <option value="tiered_flat">Step-up tiered (flat τιμή ανά tier)</option>
             <option value="conditional_percent">Υπό όρους — % έκπτωση (π.χ. 2 τεμ. −20%)</option>
             <option value="conditional_flat">Υπό όρους — ειδική τιμή flat (π.χ. 2 τεμ. €X)</option>
             <option value="gwp">Δώρο με αγορά (GWP)</option>
             <option value="bundle">Bundle</option>
           </select>
         </div>
-        <div class="field">
+        <div class="field" id="bulk-value-wrap">
           <label id="bulk-value-label">Τιμή / Ποσοστό</label>
           <input type="number" id="bulk-value" step="0.01" value="40">
+        </div>
+        <div class="field" id="bulk-tiers-wrap" style="grid-column: 1 / -1; display: none;">
+          <label>Tier Breakpoints (μορφή <code>qty:value</code> με κόμμα, π.χ. <code>2:30, 3:40</code>)</label>
+          <input type="text" id="bulk-tiers" placeholder="2:30, 3:40">
         </div>
       </div>
       <div style="margin-top: 14px; display: flex; gap: 6px;">
@@ -905,6 +911,8 @@ color: var(–ink-soft);
         <option value="none">Καμία (baseline)</option>
         <option value="percent">Ποσοστιαία έκπτωση</option>
         <option value="flat">Flat (αφαιρείται από SRP)</option>
+        <option value="tiered_percent">Step-up tiered (%)</option>
+        <option value="tiered_flat">Step-up tiered (flat)</option>
         <option value="conditional_percent">Υπό όρους − %</option>
         <option value="conditional_flat">Υπό όρους − ειδική τιμή</option>
         <option value="gwp">GWP</option>
@@ -914,6 +922,10 @@ color: var(–ink-soft);
     <div class="field">
       <label>Ένταση (% ή €)</label>
       <input type="number" id="fc-intensity" value="20">
+    </div>
+    <div class="field" id="fc-tiers-wrap" style="grid-column: 1 / -1; display: none;">
+      <label>Tier Breakpoints (π.χ. 2:30, 3:40)</label>
+      <input type="text" id="fc-tiers" placeholder="2:30, 3:40">
     </div>
   </div>
 
@@ -958,9 +970,11 @@ color: var(–ink-soft);
       </div>
       <div id="actions-csv-paste" style="display:none;">
         <div class="import-help">
-          <strong>Μορφή:</strong> <code>τίτλος, ημ.έναρξης, ημ.λήξης, τύπος, τιμή/ποσοστό, κωδικός1|κωδικός2|..., σημειώσεις</code><br>
-          <strong>Τύποι:</strong> <code>percent</code>, <code>flat</code>, <code>conditional_percent</code>, <code>conditional_flat</code>, <code>gwp</code>, <code>bundle</code>, <code>category</code><br>
-          <strong>Παράδειγμα:</strong> <code>Mother's Day, 2026-05-01, 2026-05-15, percent, 25, ELC-001|ELC-002, Online only</code>
+          <strong>Μορφή:</strong> <code>τίτλος, ημ.έναρξης, ημ.λήξης, τύπος, τιμή, κωδικός1|κωδικός2, σημειώσεις, tiers</code><br>
+          <strong>Τύποι:</strong> <code>percent</code>, <code>flat</code>, <code>tiered_percent</code>, <code>tiered_flat</code>, <code>conditional_percent</code>, <code>conditional_flat</code>, <code>gwp</code>, <code>bundle</code>, <code>category</code><br>
+          <strong>Tiers format:</strong> <code>2:30|3:40</code> (στα 2τεμ −30%, στα 3τεμ −40%) — μόνο για tiered_* τύπους<br>
+          <strong>Παράδειγμα απλό:</strong> <code>Mother's Day, 2026-05-01, 2026-05-15, percent, 25, ELC-001|ELC-002, Online only</code><br>
+          <strong>Παράδειγμα tiered:</strong> <code>Bundle May, 2026-05-01, 2026-05-15, tiered_percent, , ELC-001|ELC-002, , 2:30|3:40</code>
         </div>
         <div class="field">
           <textarea id="actions-csv" rows="5" placeholder="Mother's Day, 2026-05-01, 2026-05-15, percent, 25, ELC-001|ELC-002, Online only"></textarea>
@@ -980,6 +994,8 @@ color: var(–ink-soft);
       <option value="all">Όλοι οι τύποι</option>
       <option value="percent">Ποσοστιαία</option>
       <option value="flat">Flat</option>
+      <option value="tiered_percent">Step-up %</option>
+      <option value="tiered_flat">Step-up flat</option>
       <option value="conditional_percent">Υπό όρους %</option>
       <option value="conditional_flat">Υπό όρους flat</option>
       <option value="gwp">GWP</option>
@@ -1034,12 +1050,13 @@ color: var(–ink-soft);
         </div>
       </div>
       <div class="import-help">
-        <strong>Μορφή CSV:</strong> <code>κωδικός, ημερομηνία, units</code><br>
-        <strong>Παράδειγμα:</strong> <code>ELC-001, 2026-04-15, 12</code><br>
-        Ή με ; ως separator. Μία γραμμή = ένα data point. Αν δεν είχατε πωλήσεις, βάλτε 0.
+        <strong>Μορφή CSV:</strong> <code>κωδικός, ημερομηνία, units, value (προαιρετικό €)</code><br>
+        <strong>Παράδειγμα:</strong> <code>ELC-001, 2026-04-15, 12, 840.00</code><br>
+        Το <strong>value</strong> είναι προαιρετικό αλλά κρίσιμο για tiered (step-up) ενέργειες — από το <code>value/units</code> υπολογίζεται το πραγματικό avg discount per day.<br>
+        Αν δεν περαστεί, το app χρησιμοποιεί την τιμή της ενέργειας ή το SRP.
       </div>
       <div class="field">
-        <textarea id="sales-csv" rows="8" placeholder="ELC-001, 2026-04-15, 12&#10;ELC-001, 2026-04-16, 8&#10;ELC-002, 2026-04-15, 25"></textarea>
+        <textarea id="sales-csv" rows="8" placeholder="ELC-001, 2026-04-15, 12, 840.00&#10;ELC-001, 2026-04-16, 8, 560.00&#10;ELC-002, 2026-04-15, 25"></textarea>
       </div>
       <div style="margin-top: 10px; display: flex; gap: 6px; flex-wrap: wrap;">
         <button class="btn btn-accent" onclick="importSales()">Εισαγωγή Sales Data</button>
@@ -1067,9 +1084,10 @@ color: var(–ink-soft);
           <th>Περιγραφή</th>
           <th class="num-right">Σημεία Data</th>
           <th class="num-right">Σύνολο Units</th>
+          <th class="num-right">Σύνολο Value</th>
+          <th class="num-right">Avg €/τεμ.</th>
           <th class="num-right">Avg/ημέρα</th>
-          <th class="num-right">Std Dev</th>
-          <th>Range Ημερομηνιών</th>
+          <th>Range</th>
         </tr>
       </thead>
       <tbody id="sales-stats-body"></tbody>
@@ -1181,6 +1199,8 @@ color: var(–ink-soft);
         <select id="act-type">
           <option value="percent">Ποσοστιαία (%)</option>
           <option value="flat">Flat (αφαιρείται από SRP)</option>
+          <option value="tiered_percent">Step-up tiered (% — π.χ. 2τεμ=−30%, 3τεμ=−40%)</option>
+          <option value="tiered_flat">Step-up tiered (flat — π.χ. 2τεμ=€X, 3τεμ=€Y)</option>
           <option value="conditional_percent">Υπό όρους − % (2 τεμ. −20%)</option>
           <option value="conditional_flat">Υπό όρους − flat (2 τεμ. €X)</option>
           <option value="gwp">Δώρο με αγορά (GWP)</option>
@@ -1188,9 +1208,13 @@ color: var(–ink-soft);
           <option value="category">Κατηγορία</option>
         </select>
       </div>
-      <div class="field">
+      <div class="field" id="act-value-field">
         <label>Τιμή/Ποσοστό</label>
         <input type="number" id="act-value" step="0.01" placeholder="20">
+      </div>
+      <div class="field" id="act-tiers-field" style="grid-column: 1 / -1; display: none;">
+        <label>Tier Breakpoints (π.χ. 2:30, 3:40 = στα 2τεμ −30%, στα 3τεμ −40%)</label>
+        <input type="text" id="act-tiers" placeholder="2:30, 3:40">
       </div>
       <div class="field" style="grid-column: 1 / -1;">
         <label>Κωδικοί (διαχωρισμένοι με κόμμα ή κενό)</label>
@@ -1253,6 +1277,8 @@ const LIFT_DEFAULTS = [
   { type: 'flat',    bucket: 'small',  med: 1.6,  sigma: 0.35, note: 'Σταθερό όφελος <15% SRP' },
   { type: 'flat',    bucket: 'medium', med: 2.5,  sigma: 0.40, note: 'Σταθερό όφελος 15-30% SRP' },
   { type: 'flat',    bucket: 'large',  med: 3.8,  sigma: 0.50, note: 'Σταθερό όφελος >30% SRP' },
+  { type: 'tiered_percent', bucket: 'any', med: 3.2, sigma: 0.50, note: 'Step-up % — ενθαρρύνει basket increase' },
+  { type: 'tiered_flat',    bucket: 'any', med: 3.0, sigma: 0.50, note: 'Step-up flat — ενθαρρύνει basket increase' },
   { type: 'conditional_percent', bucket: 'any', med: 2.2, sigma: 0.45, note: '2 τεμ. -20% κλπ' },
   { type: 'conditional_flat',    bucket: 'any', med: 2.4, sigma: 0.45, note: '2 τεμ. στα €X' },
   { type: 'gwp',     bucket: 'any',    med: 1.5,  sigma: 0.30, note: 'Δώρο με αγορά' },
@@ -1273,18 +1299,20 @@ let state = {
 const TYPE_LABELS = {
   percent: 'Ποσοστιαία %',
   flat: 'Flat €',
+  tiered_percent: 'Step-up %',
+  tiered_flat: 'Step-up flat',
   conditional_percent: 'Υπό όρους %',
   conditional_flat: 'Υπό όρους flat',
   gwp: 'Δώρο (GWP)',
   bundle: 'Bundle',
   category: 'Κατηγορία',
   none: 'Καμία',
-  // backward compat
   conditional: 'Υπό όρους'
 };
 
 const TYPE_CLASSES = {
   percent: 'percent', flat: 'flat',
+  tiered_percent: 'percent', tiered_flat: 'flat',
   conditional_percent: 'conditional',
   conditional_flat: 'conditional',
   conditional: 'conditional',
@@ -1315,6 +1343,67 @@ function addDays(dateStr, n) {
   const d = new Date(dateStr);
   d.setDate(d.getDate() + n);
   return d.toISOString().split('T')[0];
+}
+
+// Safe string-based date comparison (avoids timezone issues)
+// Returns: true if dateStr is within [startStr, endStr] inclusive
+function isDateInRange(dateStr, startStr, endStr) {
+  if (!dateStr || !startStr) return false;
+  const d = (dateStr || '').slice(0, 10);
+  const s = (startStr || '').slice(0, 10);
+  const e = (endStr || startStr || '').slice(0, 10);
+  return d >= s && d <= e;
+}
+
+// Parse tiers string "2:30, 3:40" → [{qty:2,value:30},{qty:3,value:40}] sorted by qty
+function parseTiers(str) {
+  if (!str) return [];
+  return str.split(/[,;]/).map(p => {
+    const [q, v] = p.split(':').map(s => parseFloat(s.trim()));
+    if (isNaN(q) || isNaN(v)) return null;
+    return { qty: q, value: v };
+  }).filter(Boolean).sort((a, b) => a.qty - b.qty);
+}
+
+// For a tiered offer, return the best (most aggressive) discount the customer COULD get
+// Used for compliance check — the lowest possible effective price
+function getBestTierPrice(srp, tiers, tierType) {
+  if (!tiers || tiers.length === 0) return srp;
+  // Best discount is the LAST tier (highest qty = best discount per unit)
+  const bestTier = tiers[tiers.length - 1];
+  if (tierType === 'tiered_percent') return srp * (1 - bestTier.value / 100);
+  if (tierType === 'tiered_flat') return bestTier.value;  // flat price per unit at that tier
+  return srp;
+}
+
+// For forecasting, derive effective avg price per unit using SALES VALUE if available
+// Otherwise use mid-tier as fallback
+function getEffectiveTierPrice(action, codeObj) {
+  const tiers = action.tiers || [];
+  if (tiers.length === 0) return codeObj.srp;
+
+  // Try to compute from real sales data within action period
+  const sales = state.sales.filter(s =>
+    s.code === codeObj.id &&
+    isDateInRange(s.date, action.start, action.end || action.start) &&
+    s.value !== undefined && s.value !== null && !isNaN(s.value)
+  );
+  let totalUnits = 0, totalValue = 0;
+  sales.forEach(s => {
+    totalUnits += Number(s.units) || 0;
+    totalValue += Number(s.value);
+  });
+  if (totalUnits > 0 && totalValue > 0) {
+    return totalValue / totalUnits;  // revealed avg price per unit
+  }
+
+  // Fallback: assume customers split evenly across tiers (mid-tier assumption)
+  let avgPrice = 0;
+  tiers.forEach(t => {
+    if (action.type === 'tiered_percent') avgPrice += codeObj.srp * (1 - t.value / 100);
+    else avgPrice += t.value;
+  });
+  return avgPrice / tiers.length;
 }
 
 // ============== MATH HELPERS ==============
@@ -1373,17 +1462,20 @@ function percentile(sortedArr, p) {
 function getEffectivePrice(code, dateStr) {
   const codeObj = state.codes.find(c => c.id === code);
   if (!codeObj) return null;
-  const date = new Date(dateStr);
   let lowestPrice = codeObj.srp;
   state.actions.forEach(act => {
     if (!act.codes.includes(code)) return;
-    if (act.type !== 'percent' && act.type !== 'flat') return;
-    const start = new Date(act.start);
-    const end = act.end ? new Date(act.end) : start;
-    if (date >= start && date <= end) {
+    // Only price-reduction types count for ΦΕΚ reference price
+    if (act.type !== 'percent' && act.type !== 'flat' &&
+        act.type !== 'tiered_percent' && act.type !== 'tiered_flat') return;
+    if (isDateInRange(dateStr, act.start, act.end || act.start)) {
       let actionPrice;
       if (act.type === 'percent') actionPrice = codeObj.srp * (1 - act.value / 100);
-      else if (act.type === 'flat') actionPrice = codeObj.srp - act.value;  // FIX
+      else if (act.type === 'flat') actionPrice = codeObj.srp - act.value;
+      else if (act.type === 'tiered_percent' || act.type === 'tiered_flat') {
+        // For tiered, use best-case price (lowest possible to customer)
+        actionPrice = getBestTierPrice(codeObj.srp, act.tiers || [], act.type);
+      }
       if (actionPrice < lowestPrice) lowestPrice = actionPrice;
     }
   });
@@ -1413,7 +1505,8 @@ function getActiveCampaignStart(code, atDateStr) {
   let earliestActionInWindow = null;
   state.actions.forEach(act => {
     if (!act.codes.includes(code)) return;
-    if (act.type !== 'percent' && act.type !== 'flat') return;
+    if (act.type !== 'percent' && act.type !== 'flat' &&
+        act.type !== 'tiered_percent' && act.type !== 'tiered_flat') return;
     const start = new Date(act.start);
     const daysAgo = daysBetween(start, date);
     if (daysAgo >= 0 && daysAgo <= 30) {
@@ -1426,12 +1519,12 @@ function getActiveCampaignStart(code, atDateStr) {
 }
 
 // ============== COMPLIANCE CHECK ==============
-function checkCompliance(code, dateStr, type, value) {
+function checkCompliance(code, dateStr, type, value, tiers) {
   const codeObj = state.codes.find(c => c.id === code);
   if (!codeObj) {
     return { status: 'err', title: 'Κωδικός δεν βρέθηκε', message: `Ο κωδικός ${code} δεν υπάρχει στον κατάλογο.` };
   }
-  // Conditional / GWP / bundle / category — δεν υπόκεινται στον 30ήμερο κανόνα
+  // Conditional / GWP / bundle / category — δεν υπόκεινται στον 30ήμερο κανόνα (παρ. 45-46)
   if (type === 'gwp' || type === 'bundle' || type === 'category' ||
       type === 'conditional_percent' || type === 'conditional_flat' || type === 'conditional') {
     return {
@@ -1441,16 +1534,30 @@ function checkCompliance(code, dateStr, type, value) {
       detail: { type: TYPE_LABELS[type], srp: codeObj.srp }
     };
   }
+
+  // Tiered offers: το ΦΕΚ θέλει η ΧΑΜΗΛΟΤΕΡΗ δυνατή τιμή που μπορεί να πετύχει ο πελάτης
+  // να είναι κάτω από την τιμή αναφοράς 30 ημερών
   let proposedPrice;
-  if (type === 'percent') proposedPrice = codeObj.srp * (1 - value / 100);
-  else if (type === 'flat') proposedPrice = codeObj.srp - value;  // FIX: flat αφαιρείται από SRP
+  let tierNote = '';
+  if (type === 'tiered_percent' || type === 'tiered_flat') {
+    if (!tiers || tiers.length === 0) {
+      return { status: 'err', title: 'Λείπουν Tiers', message: 'Δεν έχουν οριστεί tier breakpoints για την tiered ενέργεια.', detail: { srp: codeObj.srp } };
+    }
+    proposedPrice = getBestTierPrice(codeObj.srp, tiers, type);
+    const lastTier = tiers[tiers.length - 1];
+    tierNote = ` (best case: στα ${lastTier.qty}τεμ → ${type === 'tiered_percent' ? '−' + lastTier.value + '%' : '€' + lastTier.value + '/τεμ'})`;
+  } else if (type === 'percent') {
+    proposedPrice = codeObj.srp * (1 - value / 100);
+  } else if (type === 'flat') {
+    proposedPrice = codeObj.srp - value;
+  }
   proposedPrice = Math.round(proposedPrice * 100) / 100;
 
   if (proposedPrice < 0) {
     return {
       status: 'err',
       title: 'Μη Έγκυρη Τιμή',
-      message: `Η flat έκπτωση €${value.toFixed(2)} υπερβαίνει το SRP (€${codeObj.srp.toFixed(2)}). Αρνητική τελική τιμή.`,
+      message: `Η έκπτωση υπερβαίνει το SRP (€${codeObj.srp.toFixed(2)}). Αρνητική τελική τιμή.`,
       detail: { proposed: proposedPrice, srp: codeObj.srp }
     };
   }
@@ -1461,7 +1568,7 @@ function checkCompliance(code, dateStr, type, value) {
     return {
       status: 'err',
       title: 'ΔΕΝ ΕΠΙΤΡΕΠΕΤΑΙ',
-      message: `Προτεινόμενη €${proposedPrice.toFixed(2)} ≥ τιμή αναφοράς €${ref.price.toFixed(2)}. Άρθρο 15 παρ.2α: η μείωση πρέπει να είναι έναντι της χαμηλότερης τιμής 30 ημερών.`,
+      message: `Προτεινόμενη €${proposedPrice.toFixed(2)}${tierNote} ≥ τιμή αναφοράς €${ref.price.toFixed(2)}. Άρθρο 15 παρ.2α: η μείωση πρέπει να είναι έναντι της χαμηλότερης τιμής 30 ημερών.`,
       detail: { proposed: proposedPrice, reference: ref.price, refDate: ref.date, srp: codeObj.srp, history: ref.history }
     };
   }
@@ -1481,13 +1588,13 @@ function checkCompliance(code, dateStr, type, value) {
       return {
         status: 'warn',
         title: 'Επιτρέπεται — Προσοχή',
-        message: `Επιτρέπεται. Πραγματική μείωση: ${reduction}%. Εκστρατεία ${campaignDays} ημ. — μένουν ${30 - campaignDays} πριν θεωρηθεί παρατεταμένη.`,
+        message: `Επιτρέπεται${tierNote}. Πραγματική μείωση: ${reduction}%. Εκστρατεία ${campaignDays} ημ. — μένουν ${30 - campaignDays} πριν θεωρηθεί παρατεταμένη.`,
         detail: { proposed: proposedPrice, reference: ref.price, refDate: ref.date, srp: codeObj.srp, campaignDays, history: ref.history, reduction: reduction + '%' }
       };
     }
   }
   const reduction = ((ref.price - proposedPrice) / ref.price * 100).toFixed(1);
-  let message = `Επιτρέπεται. Πραγματική μείωση ${reduction}% (από τιμή αναφοράς €${ref.price.toFixed(2)}).`;
+  let message = `Επιτρέπεται${tierNote}. Πραγματική μείωση ${reduction}% (από τιμή αναφοράς €${ref.price.toFixed(2)}).`;
   if (ref.price < codeObj.srp) {
     message += ` ΠΡΟΣΟΧΗ: τιμή αναφοράς < SRP — μην εμφανίσεις το SRP ως διαγραμμένο.`;
   }
@@ -1507,12 +1614,11 @@ function getSalesForCode(code) {
 function getNonPromoSales(code) {
   const sales = getSalesForCode(code);
   return sales.filter(s => {
-    // Check if this date had any percent/flat action for this code
     const hadPromo = state.actions.some(a => {
       if (!a.codes.includes(code)) return false;
-      if (a.type !== 'percent' && a.type !== 'flat') return false;
-      const sDate = new Date(s.date);
-      return sDate >= new Date(a.start) && sDate <= new Date(a.end || a.start);
+      if (a.type !== 'percent' && a.type !== 'flat' &&
+          a.type !== 'tiered_percent' && a.type !== 'tiered_flat') return false;
+      return isDateInRange(s.date, a.start, a.end || a.start);
     });
     return !hadPromo;
   });
@@ -1542,7 +1648,6 @@ function getLiftParams(type, intensity, srp) {
     else if (intensity < 40) bucket = '25-40%';
     else bucket = '40%+';
   } else if (type === 'flat' && srp) {
-    // Convert flat € discount to % of SRP, then bucket
     const pctOfSrp = (intensity / srp) * 100;
     if (pctOfSrp < 15) bucket = 'small';
     else if (pctOfSrp < 30) bucket = 'medium';
@@ -1556,7 +1661,7 @@ function getLiftParams(type, intensity, srp) {
   return entry;
 }
 
-function forecastUnits(code, days, type, intensity) {
+function forecastUnits(code, days, type, intensity, tiers, actionRef) {
   const codeObj = state.codes.find(c => c.id === code);
   if (!codeObj) return null;
 
@@ -1580,16 +1685,41 @@ function forecastUnits(code, days, type, intensity) {
   const p50 = percentile(sims, 0.50);
   const p90 = percentile(sims, 0.90);
 
-  // Calculate unit price
+  // Calculate unit price (effective average paid per unit)
   let unitPrice;
-  if (type === 'percent') unitPrice = codeObj.srp * (1 - intensity / 100);
-  else if (type === 'flat') unitPrice = codeObj.srp - intensity;  // FIX
-  else unitPrice = codeObj.srp;
+  let priceSource = 'srp';
+  if (type === 'percent') {
+    unitPrice = codeObj.srp * (1 - intensity / 100);
+    priceSource = 'percent';
+  } else if (type === 'flat') {
+    unitPrice = codeObj.srp - intensity;
+    priceSource = 'flat';
+  } else if (type === 'tiered_percent' || type === 'tiered_flat') {
+    // Use revealed avg price from sales data if action exists, else mid-tier
+    if (actionRef) {
+      unitPrice = getEffectiveTierPrice(actionRef, codeObj);
+      priceSource = 'revealed';
+    } else if (tiers && tiers.length > 0) {
+      // Mid-tier fallback
+      let avgP = 0;
+      tiers.forEach(t => {
+        if (type === 'tiered_percent') avgP += codeObj.srp * (1 - t.value / 100);
+        else avgP += t.value;
+      });
+      unitPrice = avgP / tiers.length;
+      priceSource = 'midtier';
+    } else {
+      unitPrice = codeObj.srp;
+    }
+  } else {
+    unitPrice = codeObj.srp;
+  }
 
   return {
     units: { p10, p50, p90, mean: sims.reduce((a, b) => a + b, 0) / sims.length },
     revenue: { p10: p10 * unitPrice, p50: p50 * unitPrice, p90: p90 * unitPrice },
     unitPrice,
+    priceSource,
     baseline,
     liftParams,
     cold: baseline.cold,
@@ -1724,26 +1854,34 @@ function runBulkCheck() {
   const duration = parseInt(document.getElementById('bulk-duration').value);
   const type = document.getElementById('bulk-type').value;
   const value = parseFloat(document.getElementById('bulk-value').value);
+  const tiersStr = document.getElementById('bulk-tiers').value;
+  const tiers = parseTiers(tiersStr);
 
   if (!date) { alert('Συμπλήρωσε ημερομηνία'); return; }
+  if ((type === 'tiered_percent' || type === 'tiered_flat') && tiers.length === 0) {
+    alert('Tiered ενέργεια χωρίς tier breakpoints. Πρόσθεσε π.χ. "2:30, 3:40" στο πεδίο Tier Breakpoints');
+    return;
+  }
+
+  // Synthetic action ref για forecast (χωρίς να αποθηκευτεί)
+  const syntheticAction = { type, value, tiers, start: date, end: date };
 
   const results = [];
   state.selectedCodes.forEach(code => {
-    const compliance = checkCompliance(code, date, type, isNaN(value) ? 0 : value);
+    const compliance = checkCompliance(code, date, type, isNaN(value) ? 0 : value, tiers);
     const codeObj = state.codes.find(c => c.id === code);
 
     let forecast = null;
     if (codeObj) {
-      forecast = forecastUnits(code, duration, type, isNaN(value) ? 0 : value);
+      forecast = forecastUnits(code, duration, type, isNaN(value) ? 0 : value, tiers, syntheticAction);
     }
 
     results.push({ code, codeObj, compliance, forecast });
   });
 
-  state.bulkResults = { results, params: { date, duration, type, value } };
+  state.bulkResults = { results, params: { date, duration, type, value, tiers } };
   document.getElementById('bulk-results').style.display = 'block';
 
-  // Summary
   const okCount = results.filter(r => r.compliance.status === 'ok').length;
   const warnCount = results.filter(r => r.compliance.status === 'warn').length;
   const errCount = results.filter(r => r.compliance.status === 'err').length;
@@ -1767,10 +1905,8 @@ function runBulkCheck() {
     </div>
   `;
 
-  // Aggregate forecast (only OK + warn codes)
   const validResults = results.filter(r => r.compliance.status !== 'err' && r.forecast);
   if (validResults.length > 0) {
-    // Sum P10/P50/P90 (approximation, since they don't strictly sum, but close for many SKUs)
     let totalUnitsP10 = 0, totalUnitsP50 = 0, totalUnitsP90 = 0;
     let totalRevP10 = 0, totalRevP50 = 0, totalRevP90 = 0;
 
@@ -1782,6 +1918,9 @@ function runBulkCheck() {
       totalRevP50 += r.forecast.revenue.p50;
       totalRevP90 += r.forecast.revenue.p90;
     });
+
+    const isTiered = type === 'tiered_percent' || type === 'tiered_flat';
+    const noteHTML = isTiered ? '<div style="font-size: 10px; color: var(--warn); margin-top: 8px; font-style: italic;">⚠ Tiered forecast: η avg τιμή βασίζεται σε mid-tier assumption. Όταν εισαχθούν actuals με value, υπολογίζεται από revealed avg.</div>' : '';
 
     document.getElementById('bulk-forecast').innerHTML = `
       <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px;">
@@ -1818,6 +1957,7 @@ function runBulkCheck() {
           <div class="forecast-cell-val">€${Math.round(totalRevP90).toLocaleString('el-GR')}</div>
         </div>
       </div>
+      ${noteHTML}
     `;
   } else {
     document.getElementById('bulk-forecast').innerHTML = '<p style="color: var(--ink-mute); font-style: italic;">Δεν υπάρχουν επιτρεπτοί κωδικοί για forecast</p>';
@@ -1897,12 +2037,19 @@ function runForecast() {
   const days = parseInt(document.getElementById('fc-days').value);
   const type = document.getElementById('fc-type').value;
   const intensity = parseFloat(document.getElementById('fc-intensity').value);
+  const tiers = parseTiers(document.getElementById('fc-tiers').value);
 
   if (!code) { alert('Συμπλήρωσε κωδικό'); return; }
   const codeObj = state.codes.find(c => c.id === code);
   if (!codeObj) { alert('Ο κωδικός δεν βρέθηκε'); return; }
 
-  const fc = forecastUnits(code, days, type, isNaN(intensity) ? 0 : intensity);
+  if ((type === 'tiered_percent' || type === 'tiered_flat') && tiers.length === 0) {
+    alert('Tiered ενέργεια χωρίς tier breakpoints');
+    return;
+  }
+
+  // For tiered with no historical action, fc has no actionRef so will use mid-tier
+  const fc = forecastUnits(code, days, type, isNaN(intensity) ? 0 : intensity, tiers, null);
   const el = document.getElementById('forecast-result');
 
   el.innerHTML = `
@@ -2096,7 +2243,10 @@ function openActionModal() {
 }
 function closeActionModal() {
   document.getElementById('action-modal').classList.remove('show');
-  ['act-title','act-end','act-codes','act-value','act-notes'].forEach(id => document.getElementById(id).value = '');
+  ['act-title','act-end','act-codes','act-value','act-notes','act-tiers'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
 }
 
 function saveAction() {
@@ -2106,9 +2256,15 @@ function saveAction() {
   const codes = document.getElementById('act-codes').value
     .split(/[\s,;\n]+/).map(s => s.trim().toUpperCase()).filter(Boolean);
   const value = parseFloat(document.getElementById('act-value').value);
+  const tiersStr = document.getElementById('act-tiers').value;
+  const tiers = parseTiers(tiersStr);
 
   if (!start || codes.length === 0) {
     alert('Ημερομηνία και τουλάχιστον ένας κωδικός υποχρεωτικά');
+    return;
+  }
+  if ((type === 'tiered_percent' || type === 'tiered_flat') && tiers.length === 0) {
+    alert('Tiered ενέργεια χωρίς tier breakpoints. Πρόσθεσε π.χ. "2:30, 3:40"');
     return;
   }
   state.actions.push({
@@ -2119,6 +2275,7 @@ function saveAction() {
     type,
     codes,
     value: isNaN(value) ? null : value,
+    tiers: tiers.length > 0 ? tiers : null,
     notes: document.getElementById('act-notes').value.trim()
   });
   closeActionModal();
@@ -2134,6 +2291,14 @@ function deleteAction(id) {
 function actionDescription(a) {
   if (a.type === 'percent') return `−${a.value}% έκπτωση`;
   if (a.type === 'flat') return `−€${a.value} έκπτωση`;
+  if (a.type === 'tiered_percent') {
+    const tDesc = (a.tiers || []).map(t => `${t.qty}τεμ: −${t.value}%`).join(', ');
+    return `Step-up tiered: ${tDesc || '(no tiers)'}`;
+  }
+  if (a.type === 'tiered_flat') {
+    const tDesc = (a.tiers || []).map(t => `${t.qty}τεμ: €${t.value}/τεμ`).join(', ');
+    return `Step-up tiered: ${tDesc || '(no tiers)'}`;
+  }
   if (a.type === 'conditional_percent') return `Υπό όρους: −${a.value}%`;
   if (a.type === 'conditional_flat') return `Υπό όρους: ειδική τιμή €${a.value}`;
   if (a.type === 'conditional') return `Υπό όρους${a.value ? ' · ' + a.value : ''}`;
@@ -2149,7 +2314,7 @@ function importActionsCSV() {
   const lines = text.split('\n').filter(Boolean);
   let added = 0, skipped = 0;
   lines.forEach(line => {
-    // Format: τίτλος, start, end, type, value, codes (pipe-separated), notes
+    // Format: τίτλος, start, end, type, value, codes (pipe-separated), notes, tiers (optional)
     const parts = line.split(',').map(s => s.trim());
     if (parts.length < 4) { skipped++; return; }
     const title = parts[0];
@@ -2158,7 +2323,9 @@ function importActionsCSV() {
     const type = parts[3];
     const value = parseFloat(parts[4]);
     const codes = (parts[5] || '').split(/[|;]/).map(s => s.trim().toUpperCase()).filter(Boolean);
-    const notes = parts.slice(6).join(',').trim();
+    const notes = parts[6] || '';
+    const tiersStr = parts[7] || '';
+    const tiers = parseTiers(tiersStr);
 
     if (!start || codes.length === 0 || !type) { skipped++; return; }
 
@@ -2167,6 +2334,7 @@ function importActionsCSV() {
       title, start, end, type,
       codes,
       value: isNaN(value) ? null : value,
+      tiers: tiers.length > 0 ? tiers : null,
       notes
     });
     added++;
@@ -2226,32 +2394,29 @@ function renderCalendar() {
           </div>
           <div class="action-grid">
             ${acts.map(a => {
-              // Compute actuals (sales during action period for action's codes)
-              const actStart = new Date(a.start);
-              const actEnd = new Date(a.end || a.start);
+              // Compute actuals using string-based date comparison (timezone-safe)
+              const actStart = a.start;
+              const actEnd = a.end || a.start;
               const actualSales = state.sales
                 .filter(s => a.codes.includes(s.code))
-                .filter(s => {
-                  const sd = new Date(s.date);
-                  return sd >= actStart && sd <= actEnd;
-                });
-              const actualUnits = actualSales.reduce((acc, s) => acc + s.units, 0);
+                .filter(s => isDateInRange(s.date, actStart, actEnd));
+              const actualUnits = actualSales.reduce((acc, s) => acc + (Number(s.units) || 0), 0);
 
-              // Compute action duration & forecast
+              // Compute action duration & status
               const duration = Math.max(1, daysBetween(a.start, a.end || a.start) + 1);
-              const isOngoing = new Date(today) >= actStart && new Date(today) <= actEnd;
-              const isPast = new Date(today) > actEnd;
-              const isFuture = new Date(today) < actStart;
+              const isOngoing = today >= actStart && today <= actEnd;
+              const isPast = today > actEnd;
+              const isFuture = today < actStart;
 
               // Aggregate forecast across all codes in the action
               let totP10 = 0, totP50 = 0, totP90 = 0;
               let revP10 = 0, revP50 = 0, revP90 = 0;
               let hasForecast = false;
-              if (a.type === 'percent' || a.type === 'flat' ||
-                  a.type === 'conditional_percent' || a.type === 'conditional_flat' ||
-                  a.type === 'gwp' || a.type === 'bundle' || a.type === 'category') {
+              const forecastableTypes = ['percent','flat','tiered_percent','tiered_flat',
+                'conditional_percent','conditional_flat','gwp','bundle','category'];
+              if (forecastableTypes.includes(a.type)) {
                 a.codes.forEach(c => {
-                  const fc = forecastUnits(c, duration, a.type, a.value || 0);
+                  const fc = forecastUnits(c, duration, a.type, a.value || 0, a.tiers || null, a);
                   if (fc) {
                     totP10 += fc.units.p10;
                     totP50 += fc.units.p50;
@@ -2264,18 +2429,38 @@ function renderCalendar() {
                 });
               }
 
-              // Revenue actuals (use action's unit price for past/ongoing)
+              // Revenue actuals: prefer explicit value field, fallback to computed price
               let actualRevenue = 0;
+              let hasExplicitValue = false;
               if (actualSales.length > 0) {
                 actualSales.forEach(s => {
                   const codeObj = state.codes.find(c => c.id === s.code);
-                  if (codeObj) {
+                  if (!codeObj) return;
+                  if (s.value !== undefined && s.value !== null && !isNaN(s.value)) {
+                    actualRevenue += Number(s.value);
+                    hasExplicitValue = true;
+                  } else {
                     let price = codeObj.srp;
                     if (a.type === 'percent') price = codeObj.srp * (1 - (a.value || 0) / 100);
                     else if (a.type === 'flat') price = codeObj.srp - (a.value || 0);
-                    actualRevenue += s.units * price;
+                    else if (a.type === 'tiered_percent' || a.type === 'tiered_flat') {
+                      price = getBestTierPrice(codeObj.srp, a.tiers || [], a.type);
+                    }
+                    actualRevenue += (Number(s.units) || 0) * price;
                   }
                 });
+              }
+
+              // For tiered: compute revealed avg discount per unit
+              let revealedAvgPrice = null;
+              let revealedDiscPct = null;
+              if ((a.type === 'tiered_percent' || a.type === 'tiered_flat') && hasExplicitValue && actualUnits > 0) {
+                revealedAvgPrice = actualRevenue / actualUnits;
+                const avgSrp = actualSales.reduce((acc, s) => {
+                  const co = state.codes.find(c => c.id === s.code);
+                  return acc + (co ? co.srp * (Number(s.units) || 0) : 0);
+                }, 0) / actualUnits;
+                revealedDiscPct = avgSrp > 0 ? ((avgSrp - revealedAvgPrice) / avgSrp * 100) : null;
               }
 
               return `
@@ -2316,12 +2501,17 @@ function renderCalendar() {
                   ${actualUnits > 0 ? `
                   <div style="margin-top: 8px; padding: 6px 8px; background: var(--ok-bg); border-radius: 2px; font-family: 'JetBrains Mono', monospace; font-size: 10px;">
                     <div style="display: flex; justify-content: space-between;">
-                      <span style="color: var(--ok); font-weight: 600;">ACTUALS μέχρι τώρα</span>
+                      <span style="color: var(--ok); font-weight: 600;">ACTUALS</span>
                       <span style="color: var(--ok); font-weight: 600;">${actualUnits.toLocaleString('el-GR')} τεμ. · €${Math.round(actualRevenue).toLocaleString('el-GR')}</span>
                     </div>
                     ${hasForecast && totP50 > 0 ? `<div style="color: var(--ink-soft); margin-top: 2px;">Pace vs P50: ${Math.round(actualUnits / totP50 * 100)}%</div>` : ''}
+                    ${revealedAvgPrice !== null ? `<div style="color: var(--accent); margin-top: 2px; font-weight: 600;">Revealed avg: €${revealedAvgPrice.toFixed(2)}/τεμ${revealedDiscPct !== null ? ' (−' + revealedDiscPct.toFixed(1) + '% effective)' : ''}</div>` : ''}
                   </div>
-                  ` : (isPast ? '<div style="margin-top: 8px; padding: 6px 8px; background: var(--bg-soft); border-radius: 2px; font-family: \'JetBrains Mono\', monospace; font-size: 10px; color: var(--ink-mute);">Δεν έχουν εισαχθεί πωλήσεις</div>' : '')}
+                  ` : `
+                  <div style="margin-top: 8px; padding: 6px 8px; background: var(--bg-soft); border-radius: 2px; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--ink-mute);">
+                    Δεν βρέθηκαν πωλήσεις στο διάστημα ${fmtDateShort(actStart)} → ${fmtDateShort(actEnd)} για τους κωδικούς (${a.codes.length})
+                  </div>
+                  `}
                 </div>
               `;
             }).join('')}
@@ -2345,11 +2535,14 @@ function importSales() {
     const code = parts[0].toUpperCase();
     const date = parts[1];
     const units = parseFloat(parts[2]);
+    const value = parts.length >= 4 ? parseFloat(parts[3]) : null;
     if (!code || !date || isNaN(units)) { skipped++; return; }
     // Avoid duplicate
     const existing = state.sales.findIndex(s => s.code === code && s.date === date);
-    if (existing >= 0) state.sales[existing].units = units;
-    else state.sales.push({ code, date, units });
+    const rec = { code, date, units };
+    if (!isNaN(value) && value !== null) rec.value = value;
+    if (existing >= 0) state.sales[existing] = rec;
+    else state.sales.push(rec);
     added++;
   });
   alert(`${added} καταχωρήσεις${skipped > 0 ? `, ${skipped} αγνοήθηκαν` : ''}`);
@@ -2383,8 +2576,13 @@ function renderSalesStats() {
   const search = (document.getElementById('sales-search')?.value || '').toLowerCase();
   const codeStats = {};
   state.sales.forEach(s => {
-    if (!codeStats[s.code]) codeStats[s.code] = { units: [], dates: [] };
-    codeStats[s.code].units.push(s.units);
+    if (!codeStats[s.code]) codeStats[s.code] = { units: [], values: [], dates: [] };
+    codeStats[s.code].units.push(Number(s.units) || 0);
+    if (s.value !== undefined && s.value !== null && !isNaN(s.value)) {
+      codeStats[s.code].values.push(Number(s.value));
+    } else {
+      codeStats[s.code].values.push(null);
+    }
     codeStats[s.code].dates.push(s.date);
   });
 
@@ -2392,27 +2590,37 @@ function renderSalesStats() {
     .filter(c => !search || c.toLowerCase().includes(search))
     .map(c => {
       const data = codeStats[c];
-      const total = data.units.reduce((a, b) => a + b, 0);
-      const avg = total / data.units.length;
-      const variance = data.units.reduce((a, b) => a + Math.pow(b - avg, 2), 0) / data.units.length;
-      const std = Math.sqrt(variance);
+      const totalUnits = data.units.reduce((a, b) => a + b, 0);
+      // Pair units with values to compute weighted avg price
+      let weightedUnitsForValue = 0;
+      let totalValue = 0;
+      data.values.forEach((v, i) => {
+        if (v !== null) {
+          totalValue += v;
+          weightedUnitsForValue += data.units[i];
+        }
+      });
+      const hasValue = weightedUnitsForValue > 0;
+      const avgPrice = hasValue ? totalValue / weightedUnitsForValue : null;
+      const avgPerDay = totalUnits / data.units.length;
       const sortedDates = data.dates.sort();
       const codeObj = state.codes.find(x => x.id === c);
-      return { code: c, desc: codeObj?.desc, n: data.units.length, total, avg, std, from: sortedDates[0], to: sortedDates[sortedDates.length - 1] };
+      return { code: c, desc: codeObj?.desc, n: data.units.length, totalUnits, totalValue, hasValue, avgPrice, avgPerDay, from: sortedDates[0], to: sortedDates[sortedDates.length - 1] };
     });
 
   const tbody = document.getElementById('sales-stats-body');
   if (rows.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="7" class="empty"><div class="empty-icon">∅</div><p>Δεν υπάρχουν δεδομένα πωλήσεων</p></td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" class="empty"><div class="empty-icon">∅</div><p>Δεν υπάρχουν δεδομένα πωλήσεων</p></td></tr>';
   } else {
     tbody.innerHTML = rows.slice(0, 300).map(r => `
       <tr>
         <td class="code-cell">${r.code}</td>
         <td>${r.desc || '—'}</td>
         <td class="num-right">${r.n}</td>
-        <td class="num-right">${r.total}</td>
-        <td class="num-right">${r.avg.toFixed(2)}</td>
-        <td class="num-right">${r.std.toFixed(2)}</td>
+        <td class="num-right">${r.totalUnits.toLocaleString('el-GR')}</td>
+        <td class="num-right price-cell">${r.hasValue ? '€' + Math.round(r.totalValue).toLocaleString('el-GR') : '—'}</td>
+        <td class="num-right price-cell">${r.avgPrice !== null ? '€' + r.avgPrice.toFixed(2) : '—'}</td>
+        <td class="num-right">${r.avgPerDay.toFixed(2)}</td>
         <td style="font-family: 'JetBrains Mono', monospace; font-size: 11px;">${fmtDateShort(r.from)} → ${fmtDateShort(r.to)}</td>
       </tr>
     `).join('');
@@ -2482,8 +2690,7 @@ function renderDashboard() {
   const totalBrands = brandFilter === 'all' ? allBrands.length : 1;
 
   const activeToday = filteredActions.filter(a => {
-    const t = new Date(today);
-    return t >= new Date(a.start) && t <= new Date(a.end || a.start);
+    return isDateInRange(today, a.start, a.end || a.start);
   });
 
   const discountedCodes = new Set();
@@ -2569,30 +2776,35 @@ function renderDashboard() {
   } else {
     let html = '<div style="max-height: 320px; overflow-y: auto;">';
     activeToday.slice(0, 6).forEach(a => {
-      const actStart = new Date(a.start);
-      const actEnd = new Date(a.end || a.start);
+      const actStart = a.start;
+      const actEnd = a.end || a.start;
       const totalDuration = Math.max(1, daysBetween(a.start, a.end || a.start) + 1);
       const daysElapsed = Math.max(1, daysBetween(a.start, today) + 1);
       const daysLeft = Math.max(0, daysBetween(today, a.end || a.start));
 
-      // Actuals so far
+      // Actuals so far (string-based comparison, timezone-safe)
       const codesInFilter = brandFilter === 'all' ? a.codes : a.codes.filter(c => filteredCodeIds.has(c));
       let actualUnits = 0, actualRev = 0;
       codesInFilter.forEach(c => {
         state.sales
           .filter(s => s.code === c)
-          .filter(s => {
-            const sd = new Date(s.date);
-            return sd >= actStart && sd <= new Date(today);
-          })
+          .filter(s => isDateInRange(s.date, actStart, today))
           .forEach(s => {
-            actualUnits += s.units;
+            const units = Number(s.units) || 0;
+            actualUnits += units;
             const codeObj = state.codes.find(x => x.id === c);
             if (codeObj) {
-              let price = codeObj.srp;
-              if (a.type === 'percent') price = codeObj.srp * (1 - (a.value || 0) / 100);
-              else if (a.type === 'flat') price = codeObj.srp - (a.value || 0);
-              actualRev += s.units * price;
+              if (s.value !== undefined && s.value !== null && !isNaN(s.value)) {
+                actualRev += Number(s.value);
+              } else {
+                let price = codeObj.srp;
+                if (a.type === 'percent') price = codeObj.srp * (1 - (a.value || 0) / 100);
+                else if (a.type === 'flat') price = codeObj.srp - (a.value || 0);
+                else if (a.type === 'tiered_percent' || a.type === 'tiered_flat') {
+                  price = getBestTierPrice(codeObj.srp, a.tiers || [], a.type);
+                }
+                actualRev += units * price;
+              }
             }
           });
       });
@@ -2601,7 +2813,7 @@ function renderDashboard() {
       let totP10 = 0, totP50 = 0, totP90 = 0;
       let revP50 = 0;
       codesInFilter.forEach(c => {
-        const fc = forecastUnits(c, totalDuration, a.type, a.value || 0);
+        const fc = forecastUnits(c, totalDuration, a.type, a.value || 0, a.tiers || null, a);
         if (fc) {
           totP10 += fc.units.p10;
           totP50 += fc.units.p50;
@@ -2794,13 +3006,22 @@ if (overviewBrandFilter) {
   overviewBrandFilter.addEventListener('change', renderDashboard);
 }
 
-// Dynamic label for bulk-type / bulk-value
+// Dynamic label for bulk-type / bulk-value + show/hide tiers
 const bulkTypeSelect = document.getElementById('bulk-type');
 const bulkValueLabel = document.getElementById('bulk-value-label');
-const bulkValueInput = document.getElementById('bulk-value');
+const bulkValueWrap = document.getElementById('bulk-value-wrap');
+const bulkTiersWrap = document.getElementById('bulk-tiers-wrap');
 function updateBulkLabel() {
   if (!bulkTypeSelect || !bulkValueLabel) return;
   const t = bulkTypeSelect.value;
+  if (t === 'tiered_percent' || t === 'tiered_flat') {
+    if (bulkValueWrap) bulkValueWrap.style.display = 'none';
+    if (bulkTiersWrap) bulkTiersWrap.style.display = 'flex';
+    return;
+  }
+  if (bulkValueWrap) bulkValueWrap.style.display = 'flex';
+  if (bulkTiersWrap) bulkTiersWrap.style.display = 'none';
+
   if (t === 'percent' || t === 'conditional_percent' || t === 'category') {
     bulkValueLabel.textContent = 'Ποσοστό Έκπτωσης (%)';
   } else if (t === 'flat' || t === 'conditional_flat') {
@@ -2811,6 +3032,35 @@ function updateBulkLabel() {
 }
 if (bulkTypeSelect) bulkTypeSelect.addEventListener('change', updateBulkLabel);
 updateBulkLabel();
+
+// Show/hide tiers for action modal
+const actTypeSelect = document.getElementById('act-type');
+const actValueField = document.getElementById('act-value-field');
+const actTiersField = document.getElementById('act-tiers-field');
+function updateActTypeUI() {
+  if (!actTypeSelect) return;
+  const t = actTypeSelect.value;
+  if (t === 'tiered_percent' || t === 'tiered_flat') {
+    if (actValueField) actValueField.style.display = 'none';
+    if (actTiersField) actTiersField.style.display = 'flex';
+  } else {
+    if (actValueField) actValueField.style.display = 'flex';
+    if (actTiersField) actTiersField.style.display = 'none';
+  }
+}
+if (actTypeSelect) actTypeSelect.addEventListener('change', updateActTypeUI);
+updateActTypeUI();
+
+// Show/hide tiers for SKU forecast
+const fcTypeSelect = document.getElementById('fc-type');
+const fcTiersWrap = document.getElementById('fc-tiers-wrap');
+function updateFcTypeUI() {
+  if (!fcTypeSelect || !fcTiersWrap) return;
+  const t = fcTypeSelect.value;
+  fcTiersWrap.style.display = (t === 'tiered_percent' || t === 'tiered_flat') ? 'flex' : 'none';
+}
+if (fcTypeSelect) fcTypeSelect.addEventListener('change', updateFcTypeUI);
+updateFcTypeUI();
 
 // Init
 document.getElementById('today-date').textContent = new Date().toLocaleDateString('el-GR', {
