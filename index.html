@@ -970,11 +970,11 @@ color: var(–ink-soft);
       </div>
       <div id="actions-csv-paste" style="display:none;">
         <div class="import-help">
-          <strong>Μορφή:</strong> <code>τίτλος, ημ.έναρξης, ημ.λήξης, τύπος, τιμή, κωδικός1|κωδικός2, σημειώσεις, tiers</code><br>
+          <strong>Μορφή:</strong> <code>τίτλος, brand, ημ.έναρξης, ημ.λήξης, τύπος, τιμή, κωδικός1|κωδικός2, σημειώσεις, tiers</code><br>
           <strong>Τύποι:</strong> <code>percent</code>, <code>flat</code>, <code>tiered_percent</code>, <code>tiered_flat</code>, <code>conditional_percent</code>, <code>conditional_flat</code>, <code>gwp</code>, <code>bundle</code>, <code>category</code><br>
           <strong>Tiers format:</strong> <code>2:30|3:40</code> (στα 2τεμ −30%, στα 3τεμ −40%) — μόνο για tiered_* τύπους<br>
-          <strong>Παράδειγμα απλό:</strong> <code>Mother's Day, 2026-05-01, 2026-05-15, percent, 25, ELC-001|ELC-002, Online only</code><br>
-          <strong>Παράδειγμα tiered:</strong> <code>Bundle May, 2026-05-01, 2026-05-15, tiered_percent, , ELC-001|ELC-002, , 2:30|3:40</code>
+          <strong>Παράδειγμα απλό:</strong> <code>Mother's Day, Estée Lauder, 2026-05-01, 2026-05-15, percent, 25, ELC-001|ELC-002, Online only</code><br>
+          <strong>Παράδειγμα tiered:</strong> <code>Bundle May, Clinique, 2026-05-01, 2026-05-15, tiered_percent, , CLN-001|CLN-002, , 2:30|3:40</code>
         </div>
         <div class="field">
           <textarea id="actions-csv" rows="5" placeholder="Mother's Day, 2026-05-01, 2026-05-15, percent, 25, ELC-001|ELC-002, Online only"></textarea>
@@ -990,6 +990,9 @@ color: var(–ink-soft);
   <div class="toolbar-left"></div>
   <div class="toolbar-right">
     <input type="text" class="search-input" id="cal-search" placeholder="Αναζήτηση...">
+    <select class="search-input" id="cal-brand-filter">
+      <option value="all">Όλα τα brands</option>
+    </select>
     <select class="search-input" id="cal-filter">
       <option value="all">Όλοι οι τύποι</option>
       <option value="percent">Ποσοστιαία</option>
@@ -1186,6 +1189,12 @@ color: var(–ink-soft);
         <label>Τίτλος Καμπάνιας</label>
         <input type="text" id="act-title" placeholder="π.χ. Mother's Day Skincare 2026">
       </div>
+      <div class="field" style="grid-column: 1 / -1;">
+        <label>Brand</label>
+        <select id="act-brand">
+          <option value="">— Επιλογή Brand —</option>
+        </select>
+      </div>
       <div class="field">
         <label>Ημερομηνία Έναρξης</label>
         <input type="date" id="act-start">
@@ -1270,21 +1279,30 @@ color: var(–ink-soft);
 <script>
 // ============== STATE ==============
 const LIFT_DEFAULTS = [
-  { type: 'percent', bucket: '0-15%',  med: 1.8,  sigma: 0.35, note: 'Ήπια έκπτωση' },
-  { type: 'percent', bucket: '15-25%', med: 2.8,  sigma: 0.40, note: 'Μέτρια έκπτωση — sweet spot' },
-  { type: 'percent', bucket: '25-40%', med: 4.2,  sigma: 0.45, note: 'Επιθετική έκπτωση' },
-  { type: 'percent', bucket: '40%+',   med: 6.0,  sigma: 0.55, note: 'Clearance / Black Friday' },
-  { type: 'flat',    bucket: 'small',  med: 1.6,  sigma: 0.35, note: 'Σταθερό όφελος <15% SRP' },
-  { type: 'flat',    bucket: 'medium', med: 2.5,  sigma: 0.40, note: 'Σταθερό όφελος 15-30% SRP' },
-  { type: 'flat',    bucket: 'large',  med: 3.8,  sigma: 0.50, note: 'Σταθερό όφελος >30% SRP' },
+  { type: 'percent', bucket: '0-15%',   med: 1.5,  sigma: 0.30, note: 'Ήπια έκπτωση — μικρό incentive' },
+  { type: 'percent', bucket: '16-24%',  med: 2.4,  sigma: 0.35, note: 'Μέτρια έκπτωση' },
+  { type: 'percent', bucket: '25-30%',  med: 3.2,  sigma: 0.40, note: 'Sweet spot — υψηλή αποτελεσματικότητα' },
+  { type: 'percent', bucket: '31-35%',  med: 4.0,  sigma: 0.42, note: 'Δυνατή έκπτωση' },
+  { type: 'percent', bucket: '36-40%',  med: 5.0,  sigma: 0.45, note: 'Επιθετική έκπτωση' },
+  { type: 'percent', bucket: '41-49%',  med: 6.2,  sigma: 0.50, note: 'Πολύ επιθετική — premium events' },
+  { type: 'percent', bucket: '50%+',    med: 8.0,  sigma: 0.60, note: 'Clearance / Black Friday' },
+  { type: 'flat',    bucket: 'small',   med: 1.6,  sigma: 0.35, note: 'Σταθερό όφελος <15% SRP' },
+  { type: 'flat',    bucket: 'medium',  med: 2.5,  sigma: 0.40, note: 'Σταθερό όφελος 15-30% SRP' },
+  { type: 'flat',    bucket: 'large',   med: 3.8,  sigma: 0.50, note: 'Σταθερό όφελος >30% SRP' },
   { type: 'tiered_percent', bucket: 'any', med: 3.2, sigma: 0.50, note: 'Step-up % — ενθαρρύνει basket increase' },
   { type: 'tiered_flat',    bucket: 'any', med: 3.0, sigma: 0.50, note: 'Step-up flat — ενθαρρύνει basket increase' },
-  { type: 'conditional_percent', bucket: 'any', med: 2.2, sigma: 0.45, note: '2 τεμ. -20% κλπ' },
+  { type: 'conditional_percent', bucket: '0-15%',  med: 1.1, sigma: 0.20, note: 'Πολύ ήπιο — minimal incentive στα 2τεμ' },
+  { type: 'conditional_percent', bucket: '16-24%', med: 1.3, sigma: 0.25, note: 'Ήπιο — αρχίζει να φαίνεται' },
+  { type: 'conditional_percent', bucket: '25-30%', med: 1.8, sigma: 0.30, note: 'Μέτριο — λογική αξία' },
+  { type: 'conditional_percent', bucket: '31-35%', med: 2.4, sigma: 0.35, note: 'Δυνατό — αξιοσημείωτο όφελος' },
+  { type: 'conditional_percent', bucket: '36-40%', med: 3.0, sigma: 0.40, note: 'Πολύ δυνατό' },
+  { type: 'conditional_percent', bucket: '41-49%', med: 3.8, sigma: 0.48, note: 'Επιθετικό — υψηλός lift' },
+  { type: 'conditional_percent', bucket: '50%+',   med: 5.0, sigma: 0.55, note: 'Premium conditional offer' },
   { type: 'conditional_flat',    bucket: 'any', med: 2.4, sigma: 0.45, note: '2 τεμ. στα €X' },
-  { type: 'gwp',     bucket: 'any',    med: 1.5,  sigma: 0.30, note: 'Δώρο με αγορά' },
-  { type: 'bundle',  bucket: 'any',    med: 1.7,  sigma: 0.35, note: 'Συσκευασία/Set' },
-  { type: 'category',bucket: 'any',    med: 2.0,  sigma: 0.40, note: 'Έκπτωση σε κατηγορία' },
-  { type: 'none',    bucket: 'any',    med: 1.0,  sigma: 0.0,  note: 'Baseline (καμία ενέργεια)' }
+  { type: 'gwp',     bucket: 'any',     med: 1.5,  sigma: 0.30, note: 'Δώρο με αγορά' },
+  { type: 'bundle',  bucket: 'any',     med: 1.7,  sigma: 0.35, note: 'Συσκευασία/Set' },
+  { type: 'category',bucket: 'any',     med: 2.0,  sigma: 0.40, note: 'Έκπτωση σε κατηγορία' },
+  { type: 'none',    bucket: 'any',     med: 1.0,  sigma: 0.0,  note: 'Baseline (καμία ενέργεια)' }
 ];
 
 let state = {
@@ -1642,11 +1660,19 @@ function getBaselinePosterior(code) {
 
 function getLiftParams(type, intensity, srp) {
   let bucket;
-  if (type === 'percent') {
-    if (intensity < 15) bucket = '0-15%';
-    else if (intensity < 25) bucket = '15-25%';
-    else if (intensity < 40) bucket = '25-40%';
-    else bucket = '40%+';
+  // Helper for granular % buckets used in both percent and conditional_percent
+  function pctBucket(x) {
+    if (x <= 15) return '0-15%';
+    if (x <= 24) return '16-24%';
+    if (x <= 30) return '25-30%';
+    if (x <= 35) return '31-35%';
+    if (x <= 40) return '36-40%';
+    if (x <= 49) return '41-49%';
+    return '50%+';
+  }
+
+  if (type === 'percent' || type === 'conditional_percent') {
+    bucket = pctBucket(intensity);
   } else if (type === 'flat' && srp) {
     const pctOfSrp = (intensity / srp) * 100;
     if (pctOfSrp < 15) bucket = 'small';
@@ -2239,11 +2265,18 @@ function renderCatalog() {
 // ============== CALENDAR ==============
 function openActionModal() {
   document.getElementById('act-start').value = todayISO();
+  // Populate brand dropdown with brands that have at least one code
+  const brandSelect = document.getElementById('act-brand');
+  if (brandSelect) {
+    const brands = [...new Set(state.codes.map(c => c.brand).filter(Boolean))].sort();
+    brandSelect.innerHTML = '<option value="">— Επιλογή Brand —</option>' +
+      brands.map(b => `<option value="${b}">${b}</option>`).join('');
+  }
   document.getElementById('action-modal').classList.add('show');
 }
 function closeActionModal() {
   document.getElementById('action-modal').classList.remove('show');
-  ['act-title','act-end','act-codes','act-value','act-notes','act-tiers'].forEach(id => {
+  ['act-title','act-end','act-codes','act-value','act-notes','act-tiers','act-brand'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
@@ -2270,6 +2303,7 @@ function saveAction() {
   state.actions.push({
     id: Date.now().toString(),
     title: document.getElementById('act-title').value.trim(),
+    brand: document.getElementById('act-brand').value.trim(),
     start,
     end: end || start,
     type,
@@ -2314,24 +2348,25 @@ function importActionsCSV() {
   const lines = text.split('\n').filter(Boolean);
   let added = 0, skipped = 0;
   lines.forEach(line => {
-    // Format: τίτλος, start, end, type, value, codes (pipe-separated), notes, tiers (optional)
+    // Format: τίτλος, brand, start, end, type, value, codes (pipe-separated), notes, tiers (optional)
     const parts = line.split(',').map(s => s.trim());
-    if (parts.length < 4) { skipped++; return; }
+    if (parts.length < 5) { skipped++; return; }
     const title = parts[0];
-    const start = parts[1];
-    const end = parts[2] || start;
-    const type = parts[3];
-    const value = parseFloat(parts[4]);
-    const codes = (parts[5] || '').split(/[|;]/).map(s => s.trim().toUpperCase()).filter(Boolean);
-    const notes = parts[6] || '';
-    const tiersStr = parts[7] || '';
+    const brand = parts[1];
+    const start = parts[2];
+    const end = parts[3] || start;
+    const type = parts[4];
+    const value = parseFloat(parts[5]);
+    const codes = (parts[6] || '').split(/[|;]/).map(s => s.trim().toUpperCase()).filter(Boolean);
+    const notes = parts[7] || '';
+    const tiersStr = parts[8] || '';
     const tiers = parseTiers(tiersStr);
 
     if (!start || codes.length === 0 || !type) { skipped++; return; }
 
     state.actions.push({
       id: Date.now().toString() + '_' + added,
-      title, start, end, type,
+      title, brand, start, end, type,
       codes,
       value: isNaN(value) ? null : value,
       tiers: tiers.length > 0 ? tiers : null,
@@ -2360,14 +2395,38 @@ function uploadActionsFile(event) {
 function renderCalendar() {
   const search = (document.getElementById('cal-search')?.value || '').toLowerCase();
   const filter = document.getElementById('cal-filter')?.value || 'all';
+  const brandFilter = document.getElementById('cal-brand-filter')?.value || 'all';
   const container = document.getElementById('calendar-list');
+
+  // Update brand filter options (brands that have codes OR brands that already have actions)
+  const brandsFromCodes = state.codes.map(c => c.brand).filter(Boolean);
+  const brandsFromActions = state.actions.map(a => a.brand).filter(Boolean);
+  const allBrands = [...new Set([...brandsFromCodes, ...brandsFromActions])].sort();
+  const brandSelect = document.getElementById('cal-brand-filter');
+  if (brandSelect) {
+    const currentVal = brandSelect.value;
+    brandSelect.innerHTML = '<option value="all">Όλα τα brands</option>' +
+      allBrands.map(b => `<option value="${b}">${b}</option>`).join('');
+    brandSelect.value = currentVal;
+  }
 
   let filtered = [...state.actions];
   if (filter !== 'all') filtered = filtered.filter(a => a.type === filter);
+  if (brandFilter !== 'all') {
+    // Action matches if its brand field matches OR if any of its codes belongs to that brand
+    filtered = filtered.filter(a => {
+      if (a.brand === brandFilter) return true;
+      return a.codes.some(c => {
+        const codeObj = state.codes.find(x => x.id === c);
+        return codeObj && codeObj.brand === brandFilter;
+      });
+    });
+  }
   if (search) filtered = filtered.filter(a =>
     a.codes.some(c => c.toLowerCase().includes(search)) ||
     (a.notes || '').toLowerCase().includes(search) ||
-    (a.title || '').toLowerCase().includes(search)
+    (a.title || '').toLowerCase().includes(search) ||
+    (a.brand || '').toLowerCase().includes(search)
   );
 
   const grouped = {};
@@ -2471,6 +2530,7 @@ function renderCalendar() {
                   ${isPast ? '<span class="badge badge-neutral" style="margin-left: 4px;">Έληξε</span>' : ''}
                   ${isFuture ? '<span class="badge badge-info" style="margin-left: 4px;">Μελλοντική</span>' : ''}
                   ${a.title ? '<div style="font-family: Fraunces, serif; font-size: 14px; margin-top: 4px; margin-bottom: 4px;">' + a.title + '</div>' : ''}
+                  ${a.brand ? '<div style="font-family: \'JetBrains Mono\', monospace; font-size: 10px; color: var(--accent); letter-spacing: 0.08em; margin-bottom: 4px;">' + a.brand.toUpperCase() + '</div>' : ''}
                   <div class="codes-line">${a.codes.slice(0, 5).join(', ')}${a.codes.length > 5 ? ' +' + (a.codes.length - 5) : ''}</div>
                   <div class="desc"><strong>${actionDescription(a)}</strong>${a.end && a.end !== a.start ? '<br><small>έως ' + fmtDateShort(a.end) + ' · ' + duration + ' ημ.</small>' : ''}</div>
                   ${a.notes ? '<div class="desc" style="margin-top: 4px; font-style: italic; color: var(--ink-mute);">' + a.notes + '</div>' : ''}
@@ -2991,7 +3051,7 @@ function renderAll() {
 }
 
 // Event listeners
-['cat-search','cal-search','cal-filter','sales-search','cat-brand-filter'].forEach(id => {
+['cat-search','cal-search','cal-filter','cal-brand-filter','sales-search','cat-brand-filter'].forEach(id => {
   const el = document.getElementById(id);
   if (el) el.addEventListener('input', () => {
     if (id.startsWith('cat')) renderCatalog();
