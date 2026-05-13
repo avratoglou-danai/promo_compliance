@@ -818,6 +818,7 @@ color: var(–ink-soft);
             <option value="tiered_flat">Step-up tiered (flat τιμή ανά tier)</option>
             <option value="conditional_percent">Υπό όρους — % έκπτωση (π.χ. 2 τεμ. −20%)</option>
             <option value="conditional_flat">Υπό όρους — ειδική τιμή flat (π.χ. 2 τεμ. €X)</option>
+            <option value="basket_coupon">Κουπόνι Καλαθιού (CRM)</option>
             <option value="gwp">Δώρο με αγορά (GWP)</option>
             <option value="bundle">Bundle</option>
           </select>
@@ -829,6 +830,14 @@ color: var(–ink-soft);
         <div class="field" id="bulk-tiers-wrap" style="grid-column: 1 / -1; display: none;">
           <label>Tier Breakpoints (μορφή <code>qty:value</code> με κόμμα, π.χ. <code>2:30, 3:40</code>)</label>
           <input type="text" id="bulk-tiers" placeholder="2:30, 3:40">
+        </div>
+        <div class="field" id="bulk-coupon-amount-wrap" style="display: none;">
+          <label>Αξία Κουπονιού (€)</label>
+          <input type="number" id="bulk-coupon-amount" step="0.01" placeholder="20">
+        </div>
+        <div class="field" id="bulk-coupon-threshold-wrap" style="display: none;">
+          <label>Min Καλάθι (€)</label>
+          <input type="number" id="bulk-coupon-threshold" step="0.01" placeholder="40">
         </div>
       </div>
       <div style="margin-top: 14px; display: flex; gap: 6px;">
@@ -970,11 +979,12 @@ color: var(–ink-soft);
       </div>
       <div id="actions-csv-paste" style="display:none;">
         <div class="import-help">
-          <strong>Μορφή:</strong> <code>τίτλος, brand, ημ.έναρξης, ημ.λήξης, τύπος, τιμή, κωδικός1|κωδικός2, σημειώσεις, tiers</code><br>
-          <strong>Τύποι:</strong> <code>percent</code>, <code>flat</code>, <code>tiered_percent</code>, <code>tiered_flat</code>, <code>conditional_percent</code>, <code>conditional_flat</code>, <code>gwp</code>, <code>bundle</code>, <code>category</code><br>
-          <strong>Tiers format:</strong> <code>2:30|3:40</code> (στα 2τεμ −30%, στα 3τεμ −40%) — μόνο για tiered_* τύπους<br>
+          <strong>Μορφή:</strong> <code>τίτλος, brand, ημ.έναρξης, ημ.λήξης, τύπος, τιμή, κωδικοί, σημειώσεις, tiers, couponAmount, couponThreshold</code><br>
+          <strong>Τύποι:</strong> <code>percent</code>, <code>flat</code>, <code>tiered_percent</code>, <code>tiered_flat</code>, <code>conditional_percent</code>, <code>conditional_flat</code>, <code>basket_coupon</code>, <code>gwp</code>, <code>bundle</code>, <code>category</code><br>
+          <strong>Tiers:</strong> <code>2:30|3:40</code> (μόνο για tiered_*)<br>
+          <strong>Κωδικοί:</strong> με <code>|</code> διαχωρισμό. Για basket_coupon άφησε κενό για auto-populate.<br>
           <strong>Παράδειγμα απλό:</strong> <code>Mother's Day, Estée Lauder, 2026-05-01, 2026-05-15, percent, 25, ELC-001|ELC-002, Online only</code><br>
-          <strong>Παράδειγμα tiered:</strong> <code>Bundle May, Clinique, 2026-05-01, 2026-05-15, tiered_percent, , CLN-001|CLN-002, , 2:30|3:40</code>
+          <strong>Παράδειγμα κουπονιού:</strong> <code>CRM May, Clinique, 2026-05-01, 2026-05-15, basket_coupon, , , Loyalty members, , 20, 40</code>
         </div>
         <div class="field">
           <textarea id="actions-csv" rows="5" placeholder="Mother's Day, 2026-05-01, 2026-05-15, percent, 25, ELC-001|ELC-002, Online only"></textarea>
@@ -1001,6 +1011,7 @@ color: var(–ink-soft);
       <option value="tiered_flat">Step-up flat</option>
       <option value="conditional_percent">Υπό όρους %</option>
       <option value="conditional_flat">Υπό όρους flat</option>
+      <option value="basket_coupon">Κουπόνι Καλαθιού</option>
       <option value="gwp">GWP</option>
       <option value="bundle">Bundle</option>
     </select>
@@ -1212,6 +1223,7 @@ color: var(–ink-soft);
           <option value="tiered_flat">Step-up tiered (flat — π.χ. 2τεμ=€X, 3τεμ=€Y)</option>
           <option value="conditional_percent">Υπό όρους − % (2 τεμ. −20%)</option>
           <option value="conditional_flat">Υπό όρους − flat (2 τεμ. €X)</option>
+          <option value="basket_coupon">Κουπόνι Καλαθιού (CRM — π.χ. €20 με €40 αγορές)</option>
           <option value="gwp">Δώρο με αγορά (GWP)</option>
           <option value="bundle">Bundle</option>
           <option value="category">Κατηγορία</option>
@@ -1225,9 +1237,20 @@ color: var(–ink-soft);
         <label>Tier Breakpoints (π.χ. 2:30, 3:40 = στα 2τεμ −30%, στα 3τεμ −40%)</label>
         <input type="text" id="act-tiers" placeholder="2:30, 3:40">
       </div>
-      <div class="field" style="grid-column: 1 / -1;">
-        <label>Κωδικοί (διαχωρισμένοι με κόμμα ή κενό)</label>
+      <div class="field" id="act-coupon-amount-field" style="display: none;">
+        <label>Αξία Κουπονιού (€)</label>
+        <input type="number" id="act-coupon-amount" step="0.01" placeholder="20">
+      </div>
+      <div class="field" id="act-coupon-threshold-field" style="display: none;">
+        <label>Min Καλάθι (€)</label>
+        <input type="number" id="act-coupon-threshold" step="0.01" placeholder="40">
+      </div>
+      <div class="field" style="grid-column: 1 / -1;" id="act-codes-field">
+        <label id="act-codes-label">Κωδικοί (διαχωρισμένοι με κόμμα ή κενό)</label>
         <textarea id="act-codes" rows="3" placeholder="ELC-001, ELC-002, ELC-003"></textarea>
+        <div id="act-codes-help" style="font-size: 11px; color: var(--ink-mute); margin-top: 4px; display: none;">
+          Άφησε κενό για να εφαρμοστεί σε όλους τους κωδικούς του επιλεγμένου brand (ή όλους τους κωδικούς αν δεν επιλέξεις brand).
+        </div>
       </div>
       <div class="field" style="grid-column: 1 / -1;">
         <label>Προϋπόθεση/Σημειώσεις</label>
@@ -1299,6 +1322,9 @@ const LIFT_DEFAULTS = [
   { type: 'conditional_percent', bucket: '41-49%', med: 3.8, sigma: 0.48, note: 'Επιθετικό — υψηλός lift' },
   { type: 'conditional_percent', bucket: '50%+',   med: 5.0, sigma: 0.55, note: 'Premium conditional offer' },
   { type: 'conditional_flat',    bucket: 'any', med: 2.4, sigma: 0.45, note: '2 τεμ. στα €X' },
+  { type: 'basket_coupon', bucket: 'low',  med: 1.15, sigma: 0.20, note: 'Κουπόνι <20% του threshold (μικρό incentive)' },
+  { type: 'basket_coupon', bucket: 'mid',  med: 1.35, sigma: 0.25, note: 'Κουπόνι 20-40% του threshold (μέτριο)' },
+  { type: 'basket_coupon', bucket: 'high', med: 1.60, sigma: 0.30, note: 'Κουπόνι 40%+ του threshold (π.χ. €20 με αγορές €40)' },
   { type: 'gwp',     bucket: 'any',     med: 1.5,  sigma: 0.30, note: 'Δώρο με αγορά' },
   { type: 'bundle',  bucket: 'any',     med: 1.7,  sigma: 0.35, note: 'Συσκευασία/Set' },
   { type: 'category',bucket: 'any',     med: 2.0,  sigma: 0.40, note: 'Έκπτωση σε κατηγορία' },
@@ -1321,6 +1347,7 @@ const TYPE_LABELS = {
   tiered_flat: 'Step-up flat',
   conditional_percent: 'Υπό όρους %',
   conditional_flat: 'Υπό όρους flat',
+  basket_coupon: 'Κουπόνι Καλαθιού',
   gwp: 'Δώρο (GWP)',
   bundle: 'Bundle',
   category: 'Κατηγορία',
@@ -1334,6 +1361,7 @@ const TYPE_CLASSES = {
   conditional_percent: 'conditional',
   conditional_flat: 'conditional',
   conditional: 'conditional',
+  basket_coupon: 'gwp',
   gwp: 'gwp', bundle: 'gwp', category: 'percent'
 };
 
@@ -1542,6 +1570,15 @@ function checkCompliance(code, dateStr, type, value, tiers) {
   if (!codeObj) {
     return { status: 'err', title: 'Κωδικός δεν βρέθηκε', message: `Ο κωδικός ${code} δεν υπάρχει στον κατάλογο.` };
   }
+  // Basket coupon = CRM ενέργεια, δεν είναι "μείωση τιμής προϊόντος" αλλά καλαθιού
+  if (type === 'basket_coupon') {
+    return {
+      status: 'ok',
+      title: 'Επιτρέπεται (CRM)',
+      message: 'Κουπόνι καλαθιού — δεν εφαρμόζεται ο 30-ήμερος κανόνας ΦΕΚ καθώς η μείωση γίνεται στο σύνολο του καλαθιού, όχι ανά προϊόν. Είναι CRM/loyalty ενέργεια.',
+      detail: { type: TYPE_LABELS[type], srp: codeObj.srp }
+    };
+  }
   // Conditional / GWP / bundle / category — δεν υπόκεινται στον 30ήμερο κανόνα (παρ. 45-46)
   if (type === 'gwp' || type === 'bundle' || type === 'category' ||
       type === 'conditional_percent' || type === 'conditional_flat' || type === 'conditional') {
@@ -1678,6 +1715,11 @@ function getLiftParams(type, intensity, srp) {
     if (pctOfSrp < 15) bucket = 'small';
     else if (pctOfSrp < 30) bucket = 'medium';
     else bucket = 'large';
+  } else if (type === 'basket_coupon') {
+    // intensity here is the coupon ratio (couponAmount / threshold as %)
+    if (intensity < 20) bucket = 'low';
+    else if (intensity < 40) bucket = 'mid';
+    else bucket = 'high';
   } else {
     bucket = 'any';
   }
@@ -1692,7 +1734,16 @@ function forecastUnits(code, days, type, intensity, tiers, actionRef) {
   if (!codeObj) return null;
 
   const baseline = getBaselinePosterior(code);
-  const liftParams = getLiftParams(type, intensity, codeObj.srp);
+
+  // For basket_coupon, intensity is computed as couponAmount / threshold * 100
+  let effIntensity = intensity;
+  if (type === 'basket_coupon' && actionRef) {
+    if (actionRef.couponAmount && actionRef.couponThreshold) {
+      effIntensity = (actionRef.couponAmount / actionRef.couponThreshold) * 100;
+    }
+  }
+
+  const liftParams = getLiftParams(type, effIntensity, codeObj.srp);
 
   const N_SIMS = 1000;
   const sims = [];
@@ -1721,12 +1772,10 @@ function forecastUnits(code, days, type, intensity, tiers, actionRef) {
     unitPrice = codeObj.srp - intensity;
     priceSource = 'flat';
   } else if (type === 'tiered_percent' || type === 'tiered_flat') {
-    // Use revealed avg price from sales data if action exists, else mid-tier
     if (actionRef) {
       unitPrice = getEffectiveTierPrice(actionRef, codeObj);
       priceSource = 'revealed';
     } else if (tiers && tiers.length > 0) {
-      // Mid-tier fallback
       let avgP = 0;
       tiers.forEach(t => {
         if (type === 'tiered_percent') avgP += codeObj.srp * (1 - t.value / 100);
@@ -1734,6 +1783,17 @@ function forecastUnits(code, days, type, intensity, tiers, actionRef) {
       });
       unitPrice = avgP / tiers.length;
       priceSource = 'midtier';
+    } else {
+      unitPrice = codeObj.srp;
+    }
+  } else if (type === 'basket_coupon') {
+    // Coupon discount is shared across the basket; per-unit discount is small
+    // Approximate: if avg basket size is at threshold, effective discount per € spent
+    // = couponAmount/threshold. Per unit at SRP this means same fractional discount.
+    if (actionRef && actionRef.couponAmount && actionRef.couponThreshold) {
+      const fractionDiscount = actionRef.couponAmount / actionRef.couponThreshold;
+      unitPrice = codeObj.srp * (1 - fractionDiscount);
+      priceSource = 'coupon_pro_rata';
     } else {
       unitPrice = codeObj.srp;
     }
@@ -1882,15 +1942,25 @@ function runBulkCheck() {
   const value = parseFloat(document.getElementById('bulk-value').value);
   const tiersStr = document.getElementById('bulk-tiers').value;
   const tiers = parseTiers(tiersStr);
+  const couponAmount = parseFloat(document.getElementById('bulk-coupon-amount').value);
+  const couponThreshold = parseFloat(document.getElementById('bulk-coupon-threshold').value);
 
   if (!date) { alert('Συμπλήρωσε ημερομηνία'); return; }
   if ((type === 'tiered_percent' || type === 'tiered_flat') && tiers.length === 0) {
     alert('Tiered ενέργεια χωρίς tier breakpoints. Πρόσθεσε π.χ. "2:30, 3:40" στο πεδίο Tier Breakpoints');
     return;
   }
+  if (type === 'basket_coupon' && (isNaN(couponAmount) || isNaN(couponThreshold))) {
+    alert('Για κουπόνι καλαθιού χρειάζονται αξία κουπονιού και min καλάθι');
+    return;
+  }
 
   // Synthetic action ref για forecast (χωρίς να αποθηκευτεί)
   const syntheticAction = { type, value, tiers, start: date, end: date };
+  if (type === 'basket_coupon') {
+    syntheticAction.couponAmount = couponAmount;
+    syntheticAction.couponThreshold = couponThreshold;
+  }
 
   const results = [];
   state.selectedCodes.forEach(code => {
@@ -2276,7 +2346,8 @@ function openActionModal() {
 }
 function closeActionModal() {
   document.getElementById('action-modal').classList.remove('show');
-  ['act-title','act-end','act-codes','act-value','act-notes','act-tiers','act-brand'].forEach(id => {
+  ['act-title','act-end','act-codes','act-value','act-notes','act-tiers','act-brand',
+   'act-coupon-amount','act-coupon-threshold'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
@@ -2286,24 +2357,57 @@ function saveAction() {
   const start = document.getElementById('act-start').value;
   const end = document.getElementById('act-end').value;
   const type = document.getElementById('act-type').value;
-  const codes = document.getElementById('act-codes').value
+  const brand = document.getElementById('act-brand').value.trim();
+  let codes = document.getElementById('act-codes').value
     .split(/[\s,;\n]+/).map(s => s.trim().toUpperCase()).filter(Boolean);
   const value = parseFloat(document.getElementById('act-value').value);
   const tiersStr = document.getElementById('act-tiers').value;
   const tiers = parseTiers(tiersStr);
+  const couponAmount = parseFloat(document.getElementById('act-coupon-amount').value);
+  const couponThreshold = parseFloat(document.getElementById('act-coupon-threshold').value);
 
-  if (!start || codes.length === 0) {
-    alert('Ημερομηνία και τουλάχιστον ένας κωδικός υποχρεωτικά');
+  if (!start) {
+    alert('Ημερομηνία υποχρεωτική');
     return;
   }
+
+  // For basket_coupon, codes can be empty → auto-populate from brand (or all)
+  if (type === 'basket_coupon') {
+    if (isNaN(couponAmount) || isNaN(couponThreshold)) {
+      alert('Για κουπόνι καλαθιού χρειάζονται αξία κουπονιού και min καλάθι');
+      return;
+    }
+    if (couponAmount >= couponThreshold) {
+      alert('Η αξία του κουπονιού πρέπει να είναι μικρότερη από το min καλάθι');
+      return;
+    }
+    if (codes.length === 0) {
+      // Auto-populate: all codes of brand, or all codes if no brand
+      const pool = brand
+        ? state.codes.filter(c => c.brand === brand)
+        : state.codes;
+      codes = pool.map(c => c.id);
+      if (codes.length === 0) {
+        alert('Δεν υπάρχουν κωδικοί για να εφαρμοστεί το κουπόνι');
+        return;
+      }
+    }
+  } else {
+    if (codes.length === 0) {
+      alert('Τουλάχιστον ένας κωδικός υποχρεωτικός');
+      return;
+    }
+  }
+
   if ((type === 'tiered_percent' || type === 'tiered_flat') && tiers.length === 0) {
     alert('Tiered ενέργεια χωρίς tier breakpoints. Πρόσθεσε π.χ. "2:30, 3:40"');
     return;
   }
-  state.actions.push({
+
+  const action = {
     id: Date.now().toString(),
     title: document.getElementById('act-title').value.trim(),
-    brand: document.getElementById('act-brand').value.trim(),
+    brand,
     start,
     end: end || start,
     type,
@@ -2311,7 +2415,12 @@ function saveAction() {
     value: isNaN(value) ? null : value,
     tiers: tiers.length > 0 ? tiers : null,
     notes: document.getElementById('act-notes').value.trim()
-  });
+  };
+  if (type === 'basket_coupon') {
+    action.couponAmount = couponAmount;
+    action.couponThreshold = couponThreshold;
+  }
+  state.actions.push(action);
   closeActionModal();
   save();
 }
@@ -2336,6 +2445,7 @@ function actionDescription(a) {
   if (a.type === 'conditional_percent') return `Υπό όρους: −${a.value}%`;
   if (a.type === 'conditional_flat') return `Υπό όρους: ειδική τιμή €${a.value}`;
   if (a.type === 'conditional') return `Υπό όρους${a.value ? ' · ' + a.value : ''}`;
+  if (a.type === 'basket_coupon') return `Κουπόνι €${a.couponAmount} με αγορές ≥ €${a.couponThreshold}`;
   if (a.type === 'gwp') return `GWP${a.notes ? ' · ' + a.notes : ''}`;
   if (a.type === 'bundle') return `Bundle${a.notes ? ' · ' + a.notes : ''}`;
   if (a.type === 'category') return `Κατηγορία −${a.value}%`;
@@ -2348,7 +2458,7 @@ function importActionsCSV() {
   const lines = text.split('\n').filter(Boolean);
   let added = 0, skipped = 0;
   lines.forEach(line => {
-    // Format: τίτλος, brand, start, end, type, value, codes (pipe-separated), notes, tiers (optional)
+    // Format: τίτλος, brand, start, end, type, value, codes (pipe-separated), notes, tiers, couponAmount, couponThreshold
     const parts = line.split(',').map(s => s.trim());
     if (parts.length < 5) { skipped++; return; }
     const title = parts[0];
@@ -2357,21 +2467,35 @@ function importActionsCSV() {
     const end = parts[3] || start;
     const type = parts[4];
     const value = parseFloat(parts[5]);
-    const codes = (parts[6] || '').split(/[|;]/).map(s => s.trim().toUpperCase()).filter(Boolean);
+    let codes = (parts[6] || '').split(/[|;]/).map(s => s.trim().toUpperCase()).filter(Boolean);
     const notes = parts[7] || '';
     const tiersStr = parts[8] || '';
     const tiers = parseTiers(tiersStr);
+    const couponAmount = parseFloat(parts[9]);
+    const couponThreshold = parseFloat(parts[10]);
 
-    if (!start || codes.length === 0 || !type) { skipped++; return; }
+    if (!start || !type) { skipped++; return; }
 
-    state.actions.push({
+    // Auto-populate codes for basket_coupon if empty
+    if (codes.length === 0 && type === 'basket_coupon') {
+      const pool = brand ? state.codes.filter(c => c.brand === brand) : state.codes;
+      codes = pool.map(c => c.id);
+    }
+    if (codes.length === 0) { skipped++; return; }
+
+    const action = {
       id: Date.now().toString() + '_' + added,
       title, brand, start, end, type,
       codes,
       value: isNaN(value) ? null : value,
       tiers: tiers.length > 0 ? tiers : null,
       notes
-    });
+    };
+    if (type === 'basket_coupon') {
+      action.couponAmount = isNaN(couponAmount) ? null : couponAmount;
+      action.couponThreshold = isNaN(couponThreshold) ? null : couponThreshold;
+    }
+    state.actions.push(action);
     added++;
   });
   alert(`${added} ενέργειες προστέθηκαν${skipped > 0 ? `, ${skipped} αγνοήθηκαν` : ''}`);
@@ -2472,7 +2596,7 @@ function renderCalendar() {
               let revP10 = 0, revP50 = 0, revP90 = 0;
               let hasForecast = false;
               const forecastableTypes = ['percent','flat','tiered_percent','tiered_flat',
-                'conditional_percent','conditional_flat','gwp','bundle','category'];
+                'conditional_percent','conditional_flat','gwp','bundle','category','basket_coupon'];
               if (forecastableTypes.includes(a.type)) {
                 a.codes.forEach(c => {
                   const fc = forecastUnits(c, duration, a.type, a.value || 0, a.tiers || null, a);
@@ -3074,13 +3198,24 @@ const bulkTiersWrap = document.getElementById('bulk-tiers-wrap');
 function updateBulkLabel() {
   if (!bulkTypeSelect || !bulkValueLabel) return;
   const t = bulkTypeSelect.value;
+  // Reset all
+  if (bulkValueWrap) bulkValueWrap.style.display = 'none';
+  if (bulkTiersWrap) bulkTiersWrap.style.display = 'none';
+  const couponAmt = document.getElementById('bulk-coupon-amount-wrap');
+  const couponTh = document.getElementById('bulk-coupon-threshold-wrap');
+  if (couponAmt) couponAmt.style.display = 'none';
+  if (couponTh) couponTh.style.display = 'none';
+
   if (t === 'tiered_percent' || t === 'tiered_flat') {
-    if (bulkValueWrap) bulkValueWrap.style.display = 'none';
     if (bulkTiersWrap) bulkTiersWrap.style.display = 'flex';
     return;
   }
+  if (t === 'basket_coupon') {
+    if (couponAmt) couponAmt.style.display = 'flex';
+    if (couponTh) couponTh.style.display = 'flex';
+    return;
+  }
   if (bulkValueWrap) bulkValueWrap.style.display = 'flex';
-  if (bulkTiersWrap) bulkTiersWrap.style.display = 'none';
 
   if (t === 'percent' || t === 'conditional_percent' || t === 'category') {
     bulkValueLabel.textContent = 'Ποσοστό Έκπτωσης (%)';
@@ -3097,15 +3232,27 @@ updateBulkLabel();
 const actTypeSelect = document.getElementById('act-type');
 const actValueField = document.getElementById('act-value-field');
 const actTiersField = document.getElementById('act-tiers-field');
+const actCouponAmountField = document.getElementById('act-coupon-amount-field');
+const actCouponThresholdField = document.getElementById('act-coupon-threshold-field');
+const actCodesHelp = document.getElementById('act-codes-help');
 function updateActTypeUI() {
   if (!actTypeSelect) return;
   const t = actTypeSelect.value;
+  // Reset all
+  if (actValueField) actValueField.style.display = 'none';
+  if (actTiersField) actTiersField.style.display = 'none';
+  if (actCouponAmountField) actCouponAmountField.style.display = 'none';
+  if (actCouponThresholdField) actCouponThresholdField.style.display = 'none';
+  if (actCodesHelp) actCodesHelp.style.display = 'none';
+
   if (t === 'tiered_percent' || t === 'tiered_flat') {
-    if (actValueField) actValueField.style.display = 'none';
     if (actTiersField) actTiersField.style.display = 'flex';
+  } else if (t === 'basket_coupon') {
+    if (actCouponAmountField) actCouponAmountField.style.display = 'flex';
+    if (actCouponThresholdField) actCouponThresholdField.style.display = 'flex';
+    if (actCodesHelp) actCodesHelp.style.display = 'block';
   } else {
     if (actValueField) actValueField.style.display = 'flex';
-    if (actTiersField) actTiersField.style.display = 'none';
   }
 }
 if (actTypeSelect) actTypeSelect.addEventListener('change', updateActTypeUI);
